@@ -23,6 +23,16 @@ const CATEGORIES: [ItemCategory, string][] = [
   ['furniture', 'Furniture'],
 ];
 
+/** Up/Down on a size dropdown steps to the next standard size instead of opening the menu. */
+const stepSelect = (sizes: readonly number[], current: number, apply: (v: number) => void) => (e: React.KeyboardEvent) => {
+  if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+  e.preventDefault();
+  e.stopPropagation();
+  const i = sizes.findIndex((v) => Math.abs(v - current) < 1);
+  const next = sizes[Math.max(0, Math.min(sizes.length - 1, (i < 0 ? 0 : i) + (e.key === 'ArrowUp' ? 1 : -1)))];
+  if (next !== undefined && Math.abs(next - current) >= 1) apply(next);
+};
+
 export const DRAG_TYPE = 'application/x-hearth-catalog';
 
 function CatalogRow({ c }: { c: CatalogItem }) {
@@ -212,7 +222,7 @@ export function ItemInspector() {
         {c.widths ? (
           <label className="row">
             <span>Width</span>
-            <select value={Math.round(size.width)} onChange={(e) => setWidth(Number(e.target.value))}>
+            <select value={Math.round(size.width)} onChange={(e) => setWidth(Number(e.target.value))} onKeyDown={stepSelect(c.widths, size.width, setWidth)}>
               {c.widths.map((w) => (
                 <option key={w} value={Math.round(w)}>
                   {formatLength(w, units)}
@@ -229,7 +239,11 @@ export function ItemInspector() {
         {c.heights ? (
           <label className="row">
             <span>Height</span>
-            <select value={Math.round(size.height)} onChange={(e) => update((i) => void (i.options.height = Number(e.target.value)))}>
+            <select
+              value={Math.round(size.height)}
+              onChange={(e) => update((i) => void (i.options.height = Number(e.target.value)))}
+              onKeyDown={stepSelect(c.heights, size.height, (h) => update((i) => void (i.options.height = h)))}
+            >
               {c.heights.map((h) => (
                 <option key={h} value={Math.round(h)}>
                   {formatLength(h, units)}

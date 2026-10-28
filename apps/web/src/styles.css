@@ -154,3 +154,11 @@ button.list { display: block; width: 100%; text-align: left; margin-bottom: 4px;
 .panel > .segmented { margin-bottom: 16px; }
 .inspector-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .inspector-head h2 { margin-bottom: 10px; }
+.length-field { display: inline-flex; align-items: stretch; }
+.length-field input.length { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.grid2 .length-field { width: 100%; }
+.grid2 .length-field input.length { flex: 1; min-width: 0; }
+.stepper-buttons { display: flex; flex-direction: column; border: 1px solid var(--line); border-left: 0; border-radius: 0 6px 6px 0; overflow: hidden; }
+.stepper-buttons button { flex: 1; border: 0; background: #faf9f6; padding: 0 5px; font-size: 9px; line-height: 1; color: var(--ink-2); }
+.stepper-buttons button:hover { background: var(--line); }
+.stepper-buttons button + button { border-top: 1px solid var(--line); }
