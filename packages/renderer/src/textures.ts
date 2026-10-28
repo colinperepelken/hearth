@@ -223,3 +223,113 @@ export function windowBackdrop(): THREE.CanvasTexture {
   }
   return toTexture(c, true);
 }
+
+type Rect = [number, number, number, number]; // x, y, w, h in px
+
+function shade(hex: string, k: number) {
+  const c = new THREE.Color(hex);
+  c.offsetHSL(0, 0, k);
+  return `#${c.getHexString()}`;
+}
+
+/** Paints glossy tiles with pillowed edges: colour, bump and roughness canvases. */
+function paintTiles(size: number, color: string, grout: string, draw: (tile: (r: Rect) => void) => void, seed: number) {
+  const [c, ctx] = canvas(size);
+  const [b, bctx] = canvas(size);
+  const [r, rctx] = canvas(size);
+  const rand = rng(seed);
+  ctx.fillStyle = grout;
+  ctx.fillRect(0, 0, size, size);
+  bctx.fillStyle = '#000';
+  bctx.fillRect(0, 0, size, size);
+  rctx.fillStyle = '#e6e6e6';
+  rctx.fillRect(0, 0, size, size);
+  const g = 3;
+  draw(([x, y, w, h]) => {
+    // Draw wrapped copies so tiles crossing the edge stay seamless.
+    for (const ox of [-size, 0, size]) {
+      for (const oy of [-size, 0, size]) {
+        const X = x + ox + g / 2, Y = y + oy + g / 2, W = w - g, H = h - g;
+        if (X > size || Y > size || X + W < 0 || Y + H < 0) continue;
+        ctx.fillStyle = shade(color, (rand() - 0.5) * 0.04);
+        ctx.fillRect(X, Y, W, H);
+        const e = Math.min(W, H) * 0.12;
+        bctx.fillStyle = '#999';
+        bctx.fillRect(X, Y, W, H);
+        bctx.fillStyle = '#fff';
+        bctx.fillRect(X + e, Y + e, W - 2 * e, H - 2 * e);
+        rctx.fillStyle = '#262626';
+        rctx.fillRect(X, Y, W, H);
+      }
+    }
+  });
+  bctx.filter = 'blur(2px)';
+  bctx.drawImage(b, 0, 0);
+  return { map: toTexture(c, true), bumpMap: toTexture(b, false), roughnessMap: toTexture(r, false) };
+}
+
+export type BacksplashPattern = 'subway' | 'subway-stacked' | 'herringbone' | 'square' | 'large-format';
+
+/** Tile textures for a backsplash; `rotation` (radians) must be applied to the UVs (herringbone runs at 45°). */
+export function backsplashTextures(style: BacksplashPattern, color: string): SurfaceTextures & { rotation: number } {
+  const key = `bs:${style}:${color}`;
+  const hit = cache.get(key) as (SurfaceTextures & { rotation: number }) | undefined;
+  if (hit) return hit;
+  const size = 1024;
+  const grout = shade(color, color === '#F3F1EC' ? -0.08 : 0.12);
+  const inch = 0.0254;
+  let worldSize = 24 * inch;
+  let rotation = 0;
+  let t: ReturnType<typeof paintTiles>;
+  switch (style) {
+    case 'subway': {
+      const tw = size / 4, th = size / 8;
+      t = paintTiles(size, color, grout, (tile) => {
+        for (let row = 0; row < 8; row++) for (let col = 0; col < 4; col++) tile([col * tw + (row % 2 ? tw / 2 : 0), row * th, tw, th]);
+      }, 3);
+      break;
+    }
+    case 'subway-stacked': {
+      const tw = size / 12, th = size / 3;
+      t = paintTiles(size, color, grout, (tile) => {
+        for (let row = 0; row < 3; row++) for (let col = 0; col < 12; col++) tile([col * tw, row * th, tw, th]);
+      }, 4);
+      break;
+    }
+    case 'square': {
+      const s = size / 6;
+      t = paintTiles(size, color, grout, (tile) => {
+        for (let row = 0; row < 6; row++) for (let col = 0; col < 6; col++) tile([col * s, row * s, s, s]);
+      }, 5);
+      break;
+    }
+    case 'large-format': {
+      worldSize = 48 * inch;
+      const tw = size / 2, th = size / 4;
+      t = paintTiles(size, color, grout, (tile) => {
+        for (let row = 0; row < 4; row++) for (let col = 0; col < 2; col++) tile([col * tw + (row % 2 ? tw / 2 : 0), row * th, tw, th]);
+      }, 6);
+      break;
+    }
+    case 'herringbone': {
+      // 2x8 tiles (ratio n = 4). Staircases of H_k = [k,k+n]x[k,k+1] and V_k = [k,k+1]x[k+1,k+1+n],
+      // repeated by (n,-n); the pattern repeats every 2n units in x and y.
+      const n = 4, period = 2 * n, px = size / period;
+      worldSize = period * 2 * inch;
+      rotation = Math.PI / 4;
+      t = paintTiles(size, color, grout, (tile) => {
+        for (let m = -3; m <= 3; m++) {
+          for (let k = -period; k <= period * 2; k++) {
+            const ox = m * n, oy = -m * n;
+            tile([(k + ox) * px, (k + oy) * px, n * px, px]);
+            tile([(k + ox) * px, (k + 1 + oy) * px, px, n * px]);
+          }
+        }
+      }, 7);
+      break;
+    }
+  }
+  const v = { ...t, worldSize, rotation };
+  cache.set(key, v);
+  return v;
+}

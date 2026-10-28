@@ -1,3 +1,5 @@
+import type { CabinetSystem, DoorStyle } from './cabinets';
+import type { ApplianceFinishId, BacksplashStyleId, CabinetSurface, CountertopId, FlooringId } from './finishes';
 import type { Mm } from './units';
 
 /**
@@ -19,8 +21,23 @@ export interface Project {
   name: string;
   units: 'imperial' | 'metric';
   building: Building;
+  finishes: Finishes;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Project-wide finish choices. Per-item overrides can come later via PlacedItem.options. */
+export interface Finishes {
+  cabinet: CabinetSurface;
+  doorStyle: DoorStyle;
+  system: CabinetSystem;
+  hardwareStyle: 'bar' | 'knob' | 'cup';
+  hardwareFinish: 'brass' | 'black' | 'nickel';
+  wallPaint: string;
+  floor: FlooringId;
+  countertop: CountertopId;
+  appliance: ApplianceFinishId;
+  backsplash: { style: BacksplashStyleId; color: string };
 }
 
 export interface Building {
@@ -34,7 +51,17 @@ export interface Level {
   ceilingHeight: Mm;
   rooms: Room[];
   /** Optional traced floorplan image, with its calibrated scale. */
-  underlay?: { src: string; mmPerPixel: number; origin: Vec2; rotation: number; opacity: number };
+  underlay?: Underlay;
+}
+
+/** A floorplan image traced under the plan. `origin` is the image's top-left corner in plan mm. */
+export interface Underlay {
+  src: string;
+  pixelWidth: number;
+  pixelHeight: number;
+  mmPerPixel: number;
+  origin: Vec2;
+  opacity: number;
 }
 
 export type RoomType = 'kitchen' | 'bathroom' | 'bedroom' | 'living' | 'dining' | 'other';
@@ -74,11 +101,15 @@ export type FinishRef = { catalogId: string } | { paintHex: string; paintName?: 
 
 export interface PlacedItem {
   id: Id;
-  /** Catalog entry, e.g. `cabinet.base.drawer-door` or `appliance.range.ge-jgb735`. */
+  /** Catalog entry id, e.g. `cab.base` or `app.range.nx60a6511ss`. */
   catalogId: string;
+  /** Plan centre of the footprint (x, y) and height of the underside above the floor (z). */
   position: { x: Mm; y: Mm; z: Mm };
-  /** Rotation about the vertical axis, radians. */
+  /**
+   * Plan rotation, radians. At 0 the item's front faces +y (down the screen);
+   * the 3D scene uses rotation.y = -rotation.
+   */
   rotation: number;
-  /** Per-item options: size, door style, hinge side, finish overrides… */
-  options: Record<string, unknown>;
+  /** Per-item options: `width`, `height` (mm) overrides and future finish overrides. */
+  options: { width?: Mm; height?: Mm; [k: string]: unknown };
 }

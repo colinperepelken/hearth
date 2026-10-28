@@ -82,10 +82,21 @@ function applyStain(rgb: [number, number, number], stain: Stain): [number, numbe
  * Paints wood into an ImageData-sized buffer. `extent` (0..1] renders only part of the tile,
  * which keeps grain legible on small swatches.
  */
-function paintWood(size: number, species: WoodSpeciesId, stain: Stain, extent: number) {
+interface Layout {
+  /** Metres covered by one texture tile. */
+  tile: number;
+  boards: number;
+  /** Floor planks: one butt joint per board per tile, at a random position. */
+  joints: boolean;
+}
+const CABINET_LAYOUT: Layout = { tile: WOOD_TILE, boards: BOARDS, joints: false };
+
+function paintWood(size: number, species: WoodSpeciesId, stain: Stain, extent: number, layout: Layout = CABINET_LAYOUT) {
   const look = LOOKS[species];
   const color = new Uint8ClampedArray(size * size * 4);
   const bump = new Uint8ClampedArray(size * size * 4);
+  const BOARDS = layout.boards;
+  const WOOD_TILE = layout.tile;
   const boardW = WOOD_TILE / BOARDS;
   // Knot centres in tile coordinates (two per tile for pine).
   const knots = look.knots
@@ -137,7 +148,13 @@ function paintWood(size: number, species: WoodSpeciesId, stain: Stain, extent: n
       }
       if (knot > 0) rgb = rgb.map((c, i) => c + ([70, 40, 20][i]! - c) * knot * 0.85) as [number, number, number];
       // Glue line between boards.
-      const seam = bu < 0.004 || bu > 0.996 ? 0.88 : 1;
+      const seamW = layout.joints ? 0.012 : 0.004;
+      let seam = bu < seamW || bu > 1 - seamW ? (layout.joints ? 0.7 : 0.88) : 1;
+      if (layout.joints) {
+        const jv = hash(board, 6, 13);
+        const dv = Math.abs(v - jv);
+        if (Math.min(dv, 1 - dv) < 0.0015) seam = 0.7;
+      }
 
       rgb = applyStain(rgb.map((c) => c * seam) as [number, number, number], stain);
       const o = (py * size + px) * 4;
@@ -166,12 +183,17 @@ function stainById(id: string): Stain {
 
 const textureCache = new Map<string, { map: THREE.CanvasTexture; bumpMap: THREE.CanvasTexture }>();
 
-export function woodTextures(species: WoodSpeciesId, stainId: string) {
-  const key = `${species}:${stainId}`;
+/** Wide floor planks: 8 boards (~7") across a 1.5 m tile, with butt joints. */
+export const FLOOR_LAYOUT: Layout = { tile: 1.5, boards: 8, joints: true };
+/** Edge-grain butcher block strips (~1.5"). */
+export const BUTCHER_LAYOUT: Layout = { tile: 0.5, boards: 13, joints: false };
+
+export function woodTextures(species: WoodSpeciesId, stainId: string, layout: Layout = CABINET_LAYOUT) {
+  const key = `${species}:${stainId}:${layout.tile}:${layout.boards}:${layout.joints}`;
   let t = textureCache.get(key);
   if (!t) {
-    const size = 1024;
-    const { color, bump } = paintWood(size, species, stainById(stainId), 1);
+    const size = layout === CABINET_LAYOUT ? 1024 : 1536;
+    const { color, bump } = paintWood(size, species, stainById(stainId), 1, layout);
     const make = (c: HTMLCanvasElement, srgb: boolean) => {
       const tex = new THREE.CanvasTexture(c);
       tex.wrapS = tex.wrapT = THREE.RepeatWrapping;

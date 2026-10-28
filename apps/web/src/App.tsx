@@ -1,122 +1,181 @@
-import { Suspense, useEffect, useRef } from 'react';
-import { Canvas, useThree } from '@react-three/fiber';
-import { Loader, OrbitControls } from '@react-three/drei';
-import { Bloom, EffectComposer, N8AO, SMAA, ToneMapping } from '@react-three/postprocessing';
-import { ToneMappingMode } from 'postprocessing';
-import { formatLength, inches, toMetres as m } from '@hearth/core';
-import { PathTracer, WalkControls } from '@hearth/renderer';
-import { ROOM, SpikeScene } from './spike/SpikeScene';
+import { useEffect } from 'react';
+import { formatLength, inches } from '@hearth/core';
+import { CatalogPanel, DRAG_TYPE, ItemInspector } from './DesignPanels';
 import { FinishesPanel } from './FinishesPanel';
-import { useApp, type ViewMode } from './store';
+import { PlanView, planDrop } from './PlanView';
+import { RoomInspector, RoomToolsPanel } from './RoomPanels';
+import { Scene3D, sceneDrop } from './Scene3D';
+import { loadSaved, resetProject, room, useHearth, type Layout, type Step } from './doc';
 
-const ORBIT_TARGET: [number, number, number] = [ROOM.width / 2 - 0.3, 1.05, 0.4];
+const STEPS: [Step, string][] = [
+  ['room', 'Room'],
+  ['design', 'Design'],
+  ['finishes', 'Finishes'],
+];
 
-/** Restores the orbit camera when leaving walk mode, and drops to eye height when entering it. */
-function CameraRig({ mode }: { mode: ViewMode }) {
-  const camera = useThree((s) => s.camera);
-  const prev = useRef(mode);
-  const scene = useThree((s) => s.scene);
+function useShortcuts() {
   useEffect(() => {
-    if (import.meta.env.DEV) Object.assign(window, { __scene: scene });
-  }, [scene]);
-  useEffect(() => {
-    if (mode === 'walk' && prev.current !== 'walk') {
-      camera.position.set(ROOM.width / 2, camera.position.y, ROOM.depth - 0.8);
-      camera.lookAt(ROOM.width / 2 - 0.3, 1.3, 0);
-    }
-    if (mode === 'orbit' && prev.current === 'walk') {
-      camera.position.set(ROOM.width * 0.78, 1.75, ROOM.depth - 0.4);
-    }
-    prev.current = mode;
-  }, [mode, camera]);
-  return null;
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.tagName === 'TEXTAREA') return;
+      const s = useHearth.getState();
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) s.redo();
+        else s.undo();
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (s.selection?.kind === 'item' || s.selection?.kind === 'opening') {
+          e.preventDefault();
+          s.deleteSelection();
+        }
+      } else if (e.key === 'Escape') {
+        s.set({ calibration: null, moveUnderlay: false });
+        s.select(null);
+      } else if (e.key.toLowerCase() === 'r' && s.selection?.kind === 'item' && s.mode !== 'walk') {
+        const id = s.selection.id;
+        s.edit((p) => {
+          const it = room(p).items.find((i) => i.id === id);
+          if (it) it.rotation += Math.PI / 2;
+        });
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+}
+
+function ViewToolbar() {
+  const mode = useHearth((s) => s.mode);
+  const eyeHeight = useHearth((s) => s.eyeHeight);
+  const samples = useHearth((s) => s.samples);
+  const units = useHearth((s) => s.project.units);
+  const set = useHearth((s) => s.set);
+  return (
+    <>
+      <div className="toolbar">
+        {(['orbit', 'walk', 'photo'] as const).map((v) => (
+          <button key={v} className={mode === v ? 'tool on' : 'tool'} onClick={() => set({ mode: v, samples: 0 })}>
+            {v === 'orbit' ? 'Orbit' : v === 'walk' ? 'Walk' : 'Photo'}
+          </button>
+        ))}
+        {mode === 'walk' && (
+          <label className="height">
+            Eye height <strong>{formatLength(eyeHeight, units)}</strong>
+            <input type="range" min={inches(36)} max={inches(80)} step={inches(0.5)} value={eyeHeight} onChange={(e) => set({ eyeHeight: Number(e.target.value) })} />
+          </label>
+        )}
+        {mode === 'photo' && <span className="hint">{samples} samples — keep still to refine</span>}
+      </div>
+      {mode === 'walk' && <div className="walk-hint">Click the view to look around · WASD to walk · Esc to release the mouse</div>}
+    </>
+  );
+}
+
+function Viewport() {
+  const step = useHearth((s) => s.step);
+  const layout = useHearth((s) => s.layout);
+  const set = useHearth((s) => s.set);
+  const showPlan = layout !== '3d';
+  const show3d = layout !== 'plan';
+
+  const onDrop = (which: 'plan' | '3d') => (e: React.DragEvent) => {
+    const id = e.dataTransfer.getData(DRAG_TYPE);
+    if (!id) return;
+    e.preventDefault();
+    const p = which === 'plan' ? planDrop.toPlan?.(e.clientX, e.clientY) : sceneDrop.toPlan?.(e.clientX, e.clientY);
+    useHearth.getState().addItem(id, p ?? undefined);
+  };
+  const allowDrop = (e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes(DRAG_TYPE)) e.preventDefault();
+  };
+
+  return (
+    <main className={`viewport layout-${layout}`}>
+      {showPlan && (
+        <div className="pane plan-pane" onDragOver={allowDrop} onDrop={onDrop('plan')}>
+          <PlanView editable={step === 'room' ? 'room' : 'design'} />
+        </div>
+      )}
+      {show3d && (
+        <div className="pane scene-pane" onDragOver={allowDrop} onDrop={onDrop('3d')}>
+          <Scene3D />
+          <ViewToolbar />
+        </div>
+      )}
+      <div className="layout-switch">
+        {(
+          [
+            ['plan', 'Plan'],
+            ['split', 'Split'],
+            ['3d', '3D'],
+          ] as [Layout, string][]
+        ).map(([l, label]) => (
+          <button key={l} className={layout === l ? 'chip on' : 'chip'} onClick={() => set({ layout: l })}>
+            {label}
+          </button>
+        ))}
+      </div>
+    </main>
+  );
 }
 
 export function App() {
-  const { mode, eyeHeight, units, samples, set } = useApp();
-  const finishKey = useApp((s) => [s.cabinetMaterial, s.cabinetColor, s.woodSpecies, s.woodStain, s.wallColor, s.doorStyle, s.system, s.hardwareStyle, s.hardwareFinish].join('|'));
+  const step = useHearth((s) => s.step);
+  const units = useHearth((s) => s.project.units);
+  const canUndo = useHearth((s) => s.past.length > 0);
+  const canRedo = useHearth((s) => s.future.length > 0);
+  const loaded = useHearth((s) => s.loaded);
+  const { set, undo, redo, edit, select } = useHearth.getState();
+  useShortcuts();
+  useEffect(() => void loadSaved(), []);
+
+  if (!loaded) return null;
 
   return (
-    <div className="app">
+    <div className={`app step-${step}`}>
       <header className="topbar">
         <div className="brand">Hearth</div>
+        <div className="history">
+          <button className="chip" disabled={!canUndo} onClick={undo} title="Undo (⌘Z)">
+            Undo
+          </button>
+          <button className="chip" disabled={!canRedo} onClick={redo} title="Redo (⇧⌘Z)">
+            Redo
+          </button>
+        </div>
         <nav className="stepper">
-          {['Room', 'Cabinets', 'Appliances', 'Finishes', 'Furnish', 'Review'].map((s) => (
-            <span key={s} className={s === 'Finishes' ? 'step active' : 'step'}>
-              {s}
-            </span>
+          {STEPS.map(([id, label], i) => (
+            <button
+              key={id}
+              className={step === id ? 'step active' : 'step'}
+              onClick={() => {
+                select(null);
+                set({ step: id, layout: id === 'room' ? 'split' : '3d', calibration: null, moveUnderlay: false, mode: 'orbit' });
+              }}
+            >
+              <span className="num">{i + 1}</span> {label}
+            </button>
           ))}
         </nav>
         <div className="units">
           {(['imperial', 'metric'] as const).map((u) => (
-            <button key={u} className={units === u ? 'chip on' : 'chip'} onClick={() => set({ units: u })}>
+            <button key={u} className={units === u ? 'chip on' : 'chip'} onClick={() => edit((p) => void (p.units = u))}>
               {u === 'imperial' ? 'ft/in' : 'mm'}
             </button>
           ))}
+          <button className="chip" onClick={() => confirm('Start over with the sample kitchen? This replaces your current design.') && resetProject()}>
+            Reset
+          </button>
         </div>
       </header>
 
-      <main className="viewport">
-        <Canvas
-          shadows="soft"
-          flat
-          dpr={[1, 2]}
-          camera={{ position: [ROOM.width * 0.78, 1.75, ROOM.depth - 0.4], fov: 50, near: 0.02, far: 50 }}
-          gl={{ antialias: false, preserveDrawingBuffer: true }}
-        >
-          <Suspense fallback={null}>
-            <SpikeScene />
-            {/* Inside the same Suspense so tracing starts only once the scene has loaded; keyed to restart on finish changes. */}
-            {mode === 'photo' && (
-              <PathTracer key={finishKey} onSamples={(n) => n !== useApp.getState().samples && set({ samples: n })} />
-            )}
-          </Suspense>
-          <CameraRig mode={mode} />
-          {mode === 'orbit' && (
-            <OrbitControls makeDefault target={ORBIT_TARGET} maxPolarAngle={Math.PI * 0.55} minDistance={0.4} maxDistance={9} enableDamping />
-          )}
-          {mode === 'walk' && (
-            <WalkControls
-              eyeHeight={m(eyeHeight)}
-              bounds={{ minX: 0.3, maxX: ROOM.width - 0.3, minZ: m(inches(24)) + 0.35, maxZ: ROOM.depth - 0.3 }}
-            />
-          )}
-          {mode !== 'photo' && (
-            <EffectComposer multisampling={0}>
-              <N8AO aoRadius={0.5} distanceFalloff={0.6} intensity={2.2} quality="high" />
-              <Bloom luminanceThreshold={1.1} intensity={0.25} mipmapBlur />
-              <ToneMapping mode={ToneMappingMode.AGX} />
-              <SMAA />
-            </EffectComposer>
-          )}
-        </Canvas>
-        <Loader />
-
-        <div className="toolbar">
-          {(['orbit', 'walk', 'photo'] as const).map((v) => (
-            <button key={v} className={mode === v ? 'tool on' : 'tool'} onClick={() => set({ mode: v, samples: 0 })}>
-              {v === 'orbit' ? 'Orbit' : v === 'walk' ? 'Walk' : 'Photo'}
-            </button>
-          ))}
-          {mode === 'walk' && (
-            <label className="height">
-              Eye height <strong>{formatLength(eyeHeight, units)}</strong>
-              <input
-                type="range"
-                min={inches(36)}
-                max={inches(80)}
-                step={inches(0.5)}
-                value={eyeHeight}
-                onChange={(e) => set({ eyeHeight: Number(e.target.value) })}
-              />
-            </label>
-          )}
-          {mode === 'photo' && <span className="hint">{samples} samples — keep still to refine</span>}
-        </div>
-        {mode === 'walk' && <div className="walk-hint">Click the view to look around · WASD to walk · Esc to release the mouse</div>}
-      </main>
-
-      <FinishesPanel />
+      {step === 'room' && <RoomToolsPanel />}
+      {step === 'design' && <CatalogPanel />}
+      <Viewport />
+      {step === 'room' && <RoomInspector />}
+      {step === 'design' && <ItemInspector />}
+      {step === 'finishes' && <FinishesPanel />}
     </div>
   );
 }

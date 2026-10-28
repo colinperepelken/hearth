@@ -44,3 +44,61 @@ export const STAINS: readonly Stain[] = [
 export type CabinetSurface =
   | { type: 'paint'; hex: string }
   | { type: 'wood'; species: WoodSpeciesId; stain: string };
+
+export const FLOORING = [
+  { id: 'wood:white-oak:natural', name: 'White oak plank' },
+  { id: 'wood:white-oak:provincial', name: 'Stained oak plank' },
+  { id: 'wood:walnut:natural', name: 'Walnut plank' },
+  { id: 'wood:maple:natural', name: 'Maple plank' },
+  { id: 'wood:hickory:natural', name: 'Hickory plank' },
+  { id: 'wood:white-oak:weathered-gray', name: 'Grey-washed oak' },
+  { id: 'tile:porcelain-light', name: 'Light porcelain 24×24' },
+  { id: 'tile:porcelain-grey', name: 'Concrete-look porcelain 24×24' },
+  { id: 'tile:checker', name: 'Black & white checker 12×12' },
+  { id: 'tile:terracotta', name: 'Terracotta 12×12' },
+] as const;
+
+export const COUNTERTOPS = [
+  { id: 'quartz-white', name: 'White quartz' },
+  { id: 'calacatta', name: 'Calacatta quartz' },
+  { id: 'carrara', name: 'Carrara marble' },
+  { id: 'black-granite', name: 'Absolute black granite' },
+  { id: 'soapstone', name: 'Soapstone' },
+  { id: 'concrete', name: 'Concrete' },
+  { id: 'butcher-maple', name: 'Maple butcher block' },
+  { id: 'butcher-walnut', name: 'Walnut butcher block' },
+] as const;
+
+export const APPLIANCE_FINISHES = [
+  { id: 'stainless', name: 'Stainless steel', hex: '#c8c9cb' },
+  { id: 'black-stainless', name: 'Black stainless', hex: '#3d3b3a' },
+  { id: 'white', name: 'White', hex: '#f2f2f0' },
+  { id: 'black', name: 'Black', hex: '#1b1b1b' },
+  { id: 'slate', name: 'Slate', hex: '#6a6763' },
+] as const;
+
+export type FlooringId = (typeof FLOORING)[number]['id'];
+export type CountertopId = (typeof COUNTERTOPS)[number]['id'];
+export type ApplianceFinishId = (typeof APPLIANCE_FINISHES)[number]['id'];
+
+export const BACKSPLASH_STYLES = [
+  { id: 'subway', name: 'Subway 3×6' },
+  { id: 'subway-stacked', name: 'Stacked vertical 2×8' },
+  { id: 'herringbone', name: 'Herringbone 2×8' },
+  { id: 'square', name: 'Square 4×4' },
+  { id: 'large-format', name: 'Large format 12×24' },
+  { id: 'slab', name: 'Countertop slab' },
+  { id: 'none', name: 'None (paint)' },
+] as const;
+
+export type BacksplashStyleId = (typeof BACKSPLASH_STYLES)[number]['id'];
+
+export const TILE_COLOURS = [
+  { name: 'White', hex: '#F3F1EC' },
+  { name: 'Cream', hex: '#EDE3CF' },
+  { name: 'Sage', hex: '#A9B39A' },
+  { name: 'Sky', hex: '#A9C1CF' },
+  { name: 'Navy', hex: '#2F3E55' },
+  { name: 'Charcoal', hex: '#3C3C3C' },
+  { name: 'Terracotta', hex: '#B5674A' },
+] as const;

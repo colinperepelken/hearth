@@ -44,20 +44,27 @@ Every change goes through a command (`addItem`, `moveWall`, …) so undo/redo, a
 
 ## UI
 
-- **Top:** stepper — Room → Cabinets → Appliances → Finishes → Furnish → Review (any step reachable at any time).
-- **Left:** catalog for the current step, with search and filters; drag into the scene.
-- **Centre:** viewport with 2D plan / 3D / split; floating camera controls (Orbit · Walk · Photo) and eye-height slider in Walk.
-- **Right:** inspector for the selection — exact dimensions, position, finish options.
+- **Top:** steps — Room → Design → Finishes (any step reachable at any time), undo/redo, units.
+- **Room:** shape presets, exact wall lengths, drag corners/walls, doors and windows, ceiling height, floorplan image with two-point scale.
+- **Design:** one catalog for cabinets, appliances and furniture (search, click or drag in); items snap to walls and neighbours; countertops and backsplash are generated over base runs.
+- **Finishes:** cabinet paint or wood + stain, door style, construction, hardware, countertop, backsplash style and colour, flooring, wall paint, appliance finish.
+- **Centre:** plan / split / 3D; Orbit · Walk (eye height, wall and cabinet collision) · Photo (path traced).
 
 ## Phases
 
-1. **Rendering spike** — one wall of shaker cabinets, counter, backsplash, window, floor; orbit, walk, photo mode. Goal: confirm the browser looks realistic enough.
-2. **Room** — wizard (rectangle / L / U / custom, or upload a PNG/JPEG floorplan), two-point scale calibration, trace and drag walls, exact ft/in input, doors/windows, ceiling height.
+1. ✅ **Rendering spike** — one wall of shaker cabinets, counter, backsplash, window, floor; orbit, walk, photo mode. Goal: confirm the browser looks realistic enough.
+2. ✅ **Room** (first pass) — wizard (rectangle / L / U / custom, or upload a PNG/JPEG floorplan), two-point scale calibration, trace and drag walls, exact ft/in input, doors/windows, ceiling height.
 3. **Cabinets** — base, wall, tall, corner, sink, drawer, pantry; framed or frameless; snapping and auto fillers; islands and peninsulas.
 4. **3D experience** — 2D/3D/split, elevations, walk mode with wall collision.
 5. **Appliances and furniture** — ranges, cooktops, wall ovens, fridges, dishwashers, microwaves (incl. over-the-range combos), hoods, sinks, faucets, stools, tables, lighting; Canadian availability.
-6. **Finishes** — door styles, hardware style and finish, cabinet and wall paint (hex or paint name), flooring, countertops and edges, backsplash.
+6. ✅ **Finishes** (first pass) — door styles, hardware style and finish, cabinet and wall paint (hex or paint name), flooring, countertops and edges, backsplash.
 7. **Smarts** — NKBA clearance warnings, work triangle, door-swing collisions, parts list.
+
+## Next up
+
+- Items follow their wall when it moves; corner-aware snapping and fillers.
+- Islands/peninsulas with seating overhang; cooktops; corner cabinets.
+- Elevation views; NKBA clearance warnings.
 
 ## Later
 

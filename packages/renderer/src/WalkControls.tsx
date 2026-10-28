@@ -3,20 +3,14 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { PointerLockControls } from '@react-three/drei';
 import * as THREE from 'three';
 
-export interface WalkBounds {
-  minX: number;
-  maxX: number;
-  minZ: number;
-  maxZ: number;
-}
-
 const SPEED = 1.4; // m/s, a normal walking pace
 
 /**
  * First-person walk: click the view to look with the mouse, WASD / arrow keys to move,
- * Esc to release. The camera stays at `eyeHeight` metres and inside `bounds`.
+ * Esc to release. The camera stays at `eyeHeight` metres; moves are rejected (per axis, so you
+ * slide along walls) wherever `canStand(x, z)` says no.
  */
-export function WalkControls({ eyeHeight, bounds }: { eyeHeight: number; bounds: WalkBounds }) {
+export function WalkControls({ eyeHeight, canStand }: { eyeHeight: number; canStand: (x: number, z: number) => boolean }) {
   const camera = useThree((s) => s.camera);
   const keys = useRef(new Set<string>());
 
@@ -42,10 +36,11 @@ export function WalkControls({ eyeHeight, bounds }: { eyeHeight: number; bounds:
       forward.y = 0;
       forward.normalize();
       right.crossVectors(forward, camera.up).normalize();
-      camera.position.addScaledVector(forward, f * SPEED * dt).addScaledVector(right, r * SPEED * dt);
+      const step = new THREE.Vector3().addScaledVector(forward, f * SPEED * dt).addScaledVector(right, r * SPEED * dt);
+      const { x, z } = camera.position;
+      if (canStand(x + step.x, z)) camera.position.x += step.x;
+      if (canStand(camera.position.x, z + step.z)) camera.position.z += step.z;
     }
-    camera.position.x = THREE.MathUtils.clamp(camera.position.x, bounds.minX, bounds.maxX);
-    camera.position.z = THREE.MathUtils.clamp(camera.position.z, bounds.minZ, bounds.maxZ);
     camera.position.y = THREE.MathUtils.damp(camera.position.y, eyeHeight, 8, dt);
   });
 

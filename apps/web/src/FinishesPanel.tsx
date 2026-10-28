@@ -1,27 +1,35 @@
-import { useState } from 'react';
-import { STAINS, WOOD_SPECIES, type WoodSpeciesId } from '@hearth/core';
-import { woodSwatch } from '@hearth/renderer';
-import { PAINTS, useApp } from './store';
+import { useEffect, useState } from 'react';
+import {
+  APPLIANCE_FINISHES,
+  BACKSPLASH_STYLES,
+  COUNTERTOPS,
+  FLOORING,
+  STAINS,
+  TILE_COLOURS,
+  WOOD_SPECIES,
+  type Finishes,
+  type WoodSpeciesId,
+} from '@hearth/core';
+import { countertopSwatch, floorSwatch, woodSwatch } from '@hearth/renderer';
+import { PAINTS, useHearth } from './doc';
 
 const HEX = /^#[0-9a-f]{6}$/i;
 
-function PaintPicker({ label, value, onChange }: { label: string; value: string; onChange: (hex: string) => void }) {
+function ColourPicker({ label, value, presets, onChange }: { label: string; value: string; presets: readonly { name: string; hex: string; code?: string }[]; onChange: (hex: string) => void }) {
   const [draft, setDraft] = useState(value);
-  const match = PAINTS.find((p) => p.hex.toLowerCase() === value.toLowerCase());
+  useEffect(() => setDraft(value), [value]);
+  const match = presets.find((p) => p.hex.toLowerCase() === value.toLowerCase());
   return (
     <section className="field">
       <h3>{label}</h3>
       <div className="swatches">
-        {PAINTS.map((p) => (
+        {presets.map((p) => (
           <button
             key={p.hex}
-            title={`${p.name} (${p.code})`}
+            title={p.code ? `${p.name} (${p.code})` : p.name}
             className={p.hex.toLowerCase() === value.toLowerCase() ? 'swatch on' : 'swatch'}
             style={{ background: p.hex }}
-            onClick={() => {
-              onChange(p.hex);
-              setDraft(p.hex);
-            }}
+            onClick={() => onChange(p.hex)}
           />
         ))}
       </div>
@@ -29,18 +37,19 @@ function PaintPicker({ label, value, onChange }: { label: string; value: string;
         <input
           value={draft}
           spellCheck={false}
+          onKeyDown={(e) => e.stopPropagation()}
           onChange={(e) => {
             setDraft(e.target.value);
             if (HEX.test(e.target.value)) onChange(e.target.value);
           }}
         />
-        <span className="muted">{match ? `${match.name} · ${match.code}` : 'Custom colour'}</span>
+        <span className="muted">{match ? (match.code ? `${match.name} · ${match.code}` : match.name) : 'Custom colour'}</span>
       </div>
     </section>
   );
 }
 
-function Segmented<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: [T, string][]; onChange: (v: T) => void }) {
+function Segmented<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: readonly (readonly [T, string])[]; onChange: (v: T) => void }) {
   return (
     <section className="field">
       <h3>{label}</h3>
@@ -55,112 +64,148 @@ function Segmented<T extends string>({ label, value, options, onChange }: { labe
   );
 }
 
-function WoodPicker({
-  species,
-  stain,
-  onChange,
-}: {
-  species: WoodSpeciesId;
-  stain: string;
-  onChange: (patch: { woodSpecies?: WoodSpeciesId; woodStain?: string }) => void;
-}) {
-  const speciesName = WOOD_SPECIES.find((w) => w.id === species)?.name;
-  const stainName = STAINS.find((x) => x.id === stain)?.name;
+function ImageSwatches<T extends string>({ label, value, options, image, onChange }: { label: string; value: T; options: readonly { id: T; name: string }[]; image: (id: T) => string; onChange: (id: T) => void }) {
   return (
-    <>
-      <section className="field">
-        <h3>Wood</h3>
-        <div className="swatches">
-          {WOOD_SPECIES.map((w) => (
-            <button
-              key={w.id}
-              title={w.name}
-              className={w.id === species ? 'swatch on' : 'swatch'}
-              style={{ backgroundImage: `url(${woodSwatch(w.id, 'natural')})` }}
-              onClick={() => onChange({ woodSpecies: w.id })}
-            />
-          ))}
-        </div>
-        <span className="muted">{speciesName}</span>
-      </section>
-      <section className="field">
-        <h3>Stain</h3>
-        <div className="swatches">
-          {STAINS.map((x) => (
-            <button
-              key={x.id}
-              title={x.name}
-              className={x.id === stain ? 'swatch on' : 'swatch'}
-              style={{ backgroundImage: `url(${woodSwatch(species, x.id)})` }}
-              onClick={() => onChange({ woodStain: x.id })}
-            />
-          ))}
-        </div>
-        <span className="muted">{stainName}</span>
-      </section>
-    </>
+    <section className="field">
+      <h3>{label}</h3>
+      <div className="swatches">
+        {options.map((o) => (
+          <button key={o.id} title={o.name} className={o.id === value ? 'swatch on' : 'swatch'} style={{ backgroundImage: `url(${image(o.id)})` }} onClick={() => onChange(o.id)} />
+        ))}
+      </div>
+      <span className="muted">{options.find((o) => o.id === value)?.name}</span>
+    </section>
   );
 }
 
 export function FinishesPanel() {
-  const s = useApp();
+  const f = useHearth((s) => s.project.finishes);
+  const edit = useHearth((s) => s.edit);
+  const set = (patch: Partial<Finishes>) => edit((p) => Object.assign(p.finishes, patch));
+  const wood = f.cabinet.type === 'wood' ? f.cabinet : null;
+  const [lastPaint, setLastPaint] = useState(f.cabinet.type === 'paint' ? f.cabinet.hex : '#ADAE8F');
+  const [lastWood, setLastWood] = useState<{ species: WoodSpeciesId; stain: string }>(wood ?? { species: 'white-oak', stain: 'natural' });
+
   return (
-    <aside className="panel">
+    <aside className="panel finishes">
       <h2>Finishes</h2>
+
+      <h4>Cabinets</h4>
       <Segmented
         label="Cabinet finish"
-        value={s.cabinetMaterial}
+        value={f.cabinet.type}
         options={[
           ['paint', 'Paint'],
           ['wood', 'Wood'],
         ]}
-        onChange={(cabinetMaterial) => s.set({ cabinetMaterial })}
+        onChange={(t) => set({ cabinet: t === 'paint' ? { type: 'paint', hex: lastPaint } : { type: 'wood', ...lastWood } })}
       />
-      {s.cabinetMaterial === 'paint' ? (
-        <PaintPicker label="Cabinet paint" value={s.cabinetColor} onChange={(cabinetColor) => s.set({ cabinetColor })} />
+      {f.cabinet.type === 'paint' ? (
+        <ColourPicker
+          label="Cabinet paint"
+          value={f.cabinet.hex}
+          presets={PAINTS}
+          onChange={(hex) => {
+            setLastPaint(hex);
+            set({ cabinet: { type: 'paint', hex } });
+          }}
+        />
       ) : (
-        <WoodPicker species={s.woodSpecies} stain={s.woodStain} onChange={(patch) => s.set(patch)} />
+        <>
+          <ImageSwatches
+            label="Wood"
+            value={wood!.species}
+            options={WOOD_SPECIES}
+            image={(id) => woodSwatch(id, 'natural')}
+            onChange={(species) => {
+              setLastWood({ ...wood!, species });
+              set({ cabinet: { ...wood!, species } });
+            }}
+          />
+          <ImageSwatches
+            label="Stain"
+            value={wood!.stain}
+            options={STAINS}
+            image={(id) => woodSwatch(wood!.species, id)}
+            onChange={(stain) => {
+              setLastWood({ ...wood!, stain });
+              set({ cabinet: { ...wood!, stain } });
+            }}
+          />
+        </>
       )}
-      <PaintPicker label="Wall paint" value={s.wallColor} onChange={(wallColor) => s.set({ wallColor })} />
       <Segmented
         label="Door style"
-        value={s.doorStyle}
+        value={f.doorStyle}
         options={[
           ['shaker', 'Shaker'],
           ['slab', 'Slab'],
           ['raised-panel', 'Raised'],
         ]}
-        onChange={(doorStyle) => s.set({ doorStyle })}
+        onChange={(doorStyle) => set({ doorStyle })}
       />
       <Segmented
         label="Construction"
-        value={s.system}
+        value={f.system}
         options={[
           ['frameless', 'Frameless'],
           ['framed', 'Framed'],
         ]}
-        onChange={(system) => s.set({ system })}
+        onChange={(system) => set({ system })}
       />
       <Segmented
         label="Hardware"
-        value={s.hardwareStyle}
+        value={f.hardwareStyle}
         options={[
           ['bar', 'Bar pull'],
           ['knob', 'Knob'],
           ['cup', 'Cup + knob'],
         ]}
-        onChange={(hardwareStyle) => s.set({ hardwareStyle })}
+        onChange={(hardwareStyle) => set({ hardwareStyle })}
       />
       <Segmented
         label="Hardware finish"
-        value={s.hardwareFinish}
+        value={f.hardwareFinish}
         options={[
           ['brass', 'Brass'],
           ['black', 'Matte black'],
           ['nickel', 'Nickel'],
         ]}
-        onChange={(hardwareFinish) => s.set({ hardwareFinish })}
+        onChange={(hardwareFinish) => set({ hardwareFinish })}
       />
+
+      <h4>Countertop & backsplash</h4>
+      <ImageSwatches label="Countertop" value={f.countertop} options={COUNTERTOPS} image={countertopSwatch} onChange={(countertop) => set({ countertop })} />
+      <Segmented
+        label="Backsplash"
+        value={f.backsplash.style}
+        options={BACKSPLASH_STYLES.map((s) => [s.id, s.name] as const)}
+        onChange={(style) => set({ backsplash: { ...f.backsplash, style } })}
+      />
+      {f.backsplash.style !== 'slab' && f.backsplash.style !== 'none' && (
+        <ColourPicker label="Tile colour" value={f.backsplash.color} presets={TILE_COLOURS} onChange={(color) => set({ backsplash: { ...f.backsplash, color } })} />
+      )}
+
+      <h4>Room</h4>
+      <ImageSwatches label="Flooring" value={f.floor} options={FLOORING} image={floorSwatch} onChange={(floor) => set({ floor })} />
+      <ColourPicker label="Wall paint" value={f.wallPaint} presets={PAINTS} onChange={(wallPaint) => set({ wallPaint })} />
+
+      <h4>Appliances</h4>
+      <section className="field">
+        <h3>Appliance finish</h3>
+        <div className="swatches">
+          {APPLIANCE_FINISHES.map((a) => (
+            <button
+              key={a.id}
+              title={a.name}
+              className={a.id === f.appliance ? 'swatch on' : 'swatch'}
+              style={{ background: a.id.includes('stainless') || a.id === 'slate' ? `linear-gradient(135deg, ${a.hex}, #fff8 50%, ${a.hex})` : a.hex }}
+              onClick={() => set({ appliance: a.id })}
+            />
+          ))}
+        </div>
+        <span className="muted">{APPLIANCE_FINISHES.find((a) => a.id === f.appliance)?.name}</span>
+      </section>
     </aside>
   );
 }

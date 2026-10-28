@@ -83,7 +83,7 @@ function layoutFronts(spec: CabinetSpec): Panel[] {
   return panels;
 }
 
-type Grain = 'x' | 'y';
+export type Grain = 'x' | 'y';
 
 /**
  * Box-projects UVs in metres / WOOD_TILE so wood grain keeps its real scale on every part.
@@ -108,7 +108,7 @@ function projectUVs(geo: THREE.BufferGeometry, grain: Grain, seed: number) {
   geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
 }
 
-function Part({
+export function Part({
   size: [w, h, d],
   position,
   grain,
@@ -134,7 +134,7 @@ function Part({
 const surfaceMaterials = new Map<string, THREE.MeshPhysicalMaterial>();
 
 /** One shared material per surface finish (keeps the path tracer's texture count low). */
-function surfaceMaterial(surface: CabinetSurface): THREE.MeshPhysicalMaterial {
+export function surfaceMaterial(surface: CabinetSurface): THREE.MeshPhysicalMaterial {
   const key = JSON.stringify(surface);
   let mat = surfaceMaterials.get(key);
   if (!mat) {

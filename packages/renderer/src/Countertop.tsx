@@ -1,7 +1,9 @@
 import { useMemo } from 'react';
 import { RoundedBox } from '@react-three/drei';
 import * as THREE from 'three';
-import { quartz, subwayTile, tiled } from './textures';
+import type { BacksplashStyleId, CountertopId } from '@hearth/core';
+import { countertopLook } from './surfaces';
+import { backsplashTextures, tiled } from './textures';
 
 export interface SinkCutout {
   /** Centre x in metres, measured from the counter's left end. */
@@ -19,16 +21,19 @@ export function Countertop({
   depth,
   thickness,
   sink,
+  material = 'quartz-white',
 }: {
   length: number;
   depth: number;
   thickness: number;
   sink?: SinkCutout;
+  material?: CountertopId;
 }) {
   const stone = useMemo(() => {
-    const t = tiled(quartz(), length, depth);
-    return new THREE.MeshPhysicalMaterial({ map: t.map, roughness: 0.12, clearcoat: 0.6, clearcoatRoughness: 0.08 });
-  }, [length, depth]);
+    const look = countertopLook(material);
+    const t = look.rotate ? tiled(look.tex, depth, length, true) : tiled(look.tex, length, depth);
+    return new THREE.MeshPhysicalMaterial({ ...look.params, map: t.map, bumpMap: t.bumpMap ?? null });
+  }, [length, depth, material]);
   const steel = useMemo(() => new THREE.MeshPhysicalMaterial({ color: '#d4d5d6', metalness: 1, roughness: 0.32 }), []);
   const chrome = useMemo(() => new THREE.MeshPhysicalMaterial({ color: '#e8e8e8', metalness: 1, roughness: 0.08 }), []);
 
@@ -100,14 +105,42 @@ function Faucet({ position, material }: { position: [number, number, number]; ma
   );
 }
 
-/** Tiled backsplash rectangle on the back wall, in metres; origin at bottom-left. */
-export function Backsplash({ x, y, width, height }: { x: number; y: number; width: number; height: number }) {
-  const tile = useMemo(() => {
-    const t = tiled(subwayTile(), width, height);
+/** Backsplash rectangle on the wall, in metres; origin at bottom-left. */
+export function Backsplash({
+  x,
+  y,
+  width,
+  height,
+  style,
+  color,
+  countertop,
+}: {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  style: BacksplashStyleId;
+  color: string;
+  countertop: CountertopId;
+}) {
+  const material = useMemo(() => {
+    if (style === 'none') return null;
+    if (style === 'slab') {
+      const look = countertopLook(countertop);
+      const t = tiled(look.tex, width, height);
+      return new THREE.MeshPhysicalMaterial({ ...look.params, map: t.map, bumpMap: t.bumpMap ?? null });
+    }
+    const tex = backsplashTextures(style, color);
+    const t = tiled(tex, width, height);
+    for (const m of [t.map, t.bumpMap, t.roughnessMap]) {
+      if (!m) continue;
+      m.rotation = tex.rotation;
+    }
     return new THREE.MeshPhysicalMaterial({ ...t, bumpScale: 1.5, roughness: 1, clearcoat: 0.8, clearcoatRoughness: 0.05 });
-  }, [width, height]);
+  }, [width, height, style, color, countertop]);
+  if (!material) return null;
   return (
-    <mesh position={[x + width / 2, y + height / 2, 0.004]} material={tile} receiveShadow>
+    <mesh position={[x + width / 2, y + height / 2, 0.004]} material={material} receiveShadow>
       <boxGeometry args={[width, height, 0.008]} />
     </mesh>
   );
