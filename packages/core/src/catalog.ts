@@ -115,6 +115,7 @@ const appliances: CatalogItem[] = [
       ['Samsung', 'RF28T5001SR', '36" French-door fridge', 'fridge-french', 35.75, 34.4, 70],
       ['LG', 'LRFXS2503S', '36" French-door fridge', 'fridge-french', 35.75, 33.75, 69.75],
       ['Bosch', 'B36CT80SNS', '36" counter-depth French-door', 'fridge-french', 35.6, 28.6, 70],
+      ['KitchenAid', 'KRFC704FPS', '36" counter-depth French-door, bottom freezer', 'fridge-french', 35.7, 30.9, 70],
       ['Whirlpool', 'WRT518SZFM', '33" top-freezer fridge', 'fridge-top-freezer', 32.75, 33.9, 66.25],
       ['Frigidaire', 'FFTR1835VW', '30" top-freezer fridge', 'fridge-top-freezer', 29.75, 31.1, 66.3],
     ] as const
@@ -148,6 +149,21 @@ const appliances: CatalogItem[] = [
     width: inches(29.9), depth: inches(15.9), height: inches(16.4), elevation: inches(66), snap: 'wall',
     render: { type: 'appliance', appliance: 'microwave-otr' },
   })),
+  {
+    id: 'app.otr.kmls311hss', name: '30" low-profile (slim) microwave/hood', brand: 'KitchenAid', model: 'KMLS311HSS',
+    category: 'appliances', group: 'Microwaves & hoods', width: inches(29.9), depth: inches(15.4), height: inches(10.3),
+    elevation: inches(66), snap: 'wall', render: { type: 'appliance', appliance: 'microwave-otr' },
+  },
+  {
+    id: 'app.hood.kvwb600dss', name: '30" wall-mount canopy hood', brand: 'KitchenAid', model: 'KVWB600DSS', category: 'appliances',
+    group: 'Microwaves & hoods', width: inches(30), depth: inches(18), height: inches(30), elevation: inches(66), snap: 'wall',
+    render: { type: 'appliance', appliance: 'hood-chimney' },
+  },
+  {
+    id: 'app.hood.kvub600dss', name: '30" under-cabinet hood', brand: 'KitchenAid', model: 'KVUB600DSS', category: 'appliances',
+    group: 'Microwaves & hoods', width: inches(30), depth: inches(20), height: inches(6), elevation: inches(60), snap: 'wall',
+    render: { type: 'appliance', appliance: 'hood-under-cabinet' },
+  },
   {
     id: 'app.mw.panasonic-nn-sn686s', name: 'Countertop microwave', brand: 'Panasonic', model: 'NN-SN686S', category: 'appliances',
     group: 'Microwaves & hoods', width: inches(21.8), depth: inches(15.9), height: inches(12.9), elevation: inches(36), snap: 'wall',
