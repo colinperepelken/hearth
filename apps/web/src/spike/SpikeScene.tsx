@@ -4,7 +4,7 @@ import { RectAreaLightUniformsLib } from 'three/examples/jsm/lights/RectAreaLigh
 import { Environment } from '@react-three/drei';
 import { STANDARD, feet, inches, toMetres as m, type CabinetSpec } from '@hearth/core';
 import { Backsplash, Cabinet, Countertop, RoomShell, type CabinetFinish } from '@hearth/renderer';
-import { useApp } from '../store';
+import { cabinetSurface, useApp } from '../store';
 
 RectAreaLightUniformsLib.init();
 
@@ -28,8 +28,9 @@ const SINK_CENTER = inches(18 + 30 + 18);
 const WINDOW = { centerX: m(SINK_CENTER), width: m(inches(28)), sill: m(inches(42)), height: m(inches(42)) };
 
 export function SpikeScene() {
-  const { cabinetColor, wallColor, doorStyle, system, hardwareStyle, hardwareFinish } = useApp();
-  const finish: CabinetFinish = { color: cabinetColor, hardwareStyle, hardwareFinish };
+  const app = useApp();
+  const { wallColor, doorStyle, system, hardwareStyle, hardwareFinish } = app;
+  const finish: CabinetFinish = { surface: cabinetSurface(app), hardwareStyle, hardwareFinish };
 
   const runLength = BASE_RUN.reduce((s, c) => s + c.width, 0);
   const counterTop = STANDARD.base.height + STANDARD.countertop.thickness;

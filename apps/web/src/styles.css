@@ -96,3 +96,4 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .segmented { display: flex; flex-wrap: wrap; gap: 4px; }
 .muted { color: var(--muted); font-size: 12px; }
 .small { font-size: 11px; line-height: 1.5; }
+.swatch { background-size: cover; }

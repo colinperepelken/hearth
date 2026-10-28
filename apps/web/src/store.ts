@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { inches, type CabinetSystem, type DoorStyle, type UnitSystem } from '@hearth/core';
+import { inches, type CabinetSurface, type CabinetSystem, type DoorStyle, type UnitSystem, type WoodSpeciesId } from '@hearth/core';
 import type { HardwareFinish, HardwareStyle } from '@hearth/renderer';
 
 export type ViewMode = 'orbit' | 'walk' | 'photo';
@@ -10,7 +10,10 @@ interface AppState {
   /** Walk-mode eye height, mm. */
   eyeHeight: number;
   samples: number;
+  cabinetMaterial: 'paint' | 'wood';
   cabinetColor: string;
+  woodSpecies: WoodSpeciesId;
+  woodStain: string;
   wallColor: string;
   doorStyle: DoorStyle;
   system: CabinetSystem;
@@ -24,7 +27,10 @@ export const useApp = create<AppState>((set) => ({
   units: 'imperial',
   eyeHeight: inches(64),
   samples: 0,
+  cabinetMaterial: 'paint',
   cabinetColor: '#ADAE8F',
+  woodSpecies: 'white-oak',
+  woodStain: 'natural',
   wallColor: '#F0EEE4',
   doorStyle: 'shaker',
   system: 'frameless',
@@ -43,3 +49,9 @@ export const PAINTS = [
   { name: 'Hale Navy', code: 'BM HC-154', hex: '#434B56' },
   { name: 'Wrought Iron', code: 'BM 2124-10', hex: '#4B4D4F' },
 ] as const;
+
+export function cabinetSurface(s: Pick<AppState, 'cabinetMaterial' | 'cabinetColor' | 'woodSpecies' | 'woodStain'>): CabinetSurface {
+  return s.cabinetMaterial === 'paint'
+    ? { type: 'paint', hex: s.cabinetColor }
+    : { type: 'wood', species: s.woodSpecies, stain: s.woodStain };
+}

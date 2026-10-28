@@ -34,7 +34,7 @@ function CameraRig({ mode }: { mode: ViewMode }) {
 
 export function App() {
   const { mode, eyeHeight, units, samples, set } = useApp();
-  const finishKey = useApp((s) => [s.cabinetColor, s.wallColor, s.doorStyle, s.system, s.hardwareStyle, s.hardwareFinish].join('|'));
+  const finishKey = useApp((s) => [s.cabinetMaterial, s.cabinetColor, s.woodSpecies, s.woodStain, s.wallColor, s.doorStyle, s.system, s.hardwareStyle, s.hardwareFinish].join('|'));
 
   return (
     <div className="app">

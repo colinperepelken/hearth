@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { STAINS, WOOD_SPECIES, type WoodSpeciesId } from '@hearth/core';
+import { woodSwatch } from '@hearth/renderer';
 import { PAINTS, useApp } from './store';
 
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -53,12 +55,72 @@ function Segmented<T extends string>({ label, value, options, onChange }: { labe
   );
 }
 
+function WoodPicker({
+  species,
+  stain,
+  onChange,
+}: {
+  species: WoodSpeciesId;
+  stain: string;
+  onChange: (patch: { woodSpecies?: WoodSpeciesId; woodStain?: string }) => void;
+}) {
+  const speciesName = WOOD_SPECIES.find((w) => w.id === species)?.name;
+  const stainName = STAINS.find((x) => x.id === stain)?.name;
+  return (
+    <>
+      <section className="field">
+        <h3>Wood</h3>
+        <div className="swatches">
+          {WOOD_SPECIES.map((w) => (
+            <button
+              key={w.id}
+              title={w.name}
+              className={w.id === species ? 'swatch on' : 'swatch'}
+              style={{ backgroundImage: `url(${woodSwatch(w.id, 'natural')})` }}
+              onClick={() => onChange({ woodSpecies: w.id })}
+            />
+          ))}
+        </div>
+        <span className="muted">{speciesName}</span>
+      </section>
+      <section className="field">
+        <h3>Stain</h3>
+        <div className="swatches">
+          {STAINS.map((x) => (
+            <button
+              key={x.id}
+              title={x.name}
+              className={x.id === stain ? 'swatch on' : 'swatch'}
+              style={{ backgroundImage: `url(${woodSwatch(species, x.id)})` }}
+              onClick={() => onChange({ woodStain: x.id })}
+            />
+          ))}
+        </div>
+        <span className="muted">{stainName}</span>
+      </section>
+    </>
+  );
+}
+
 export function FinishesPanel() {
   const s = useApp();
   return (
     <aside className="panel">
       <h2>Finishes</h2>
-      <PaintPicker label="Cabinet paint" value={s.cabinetColor} onChange={(cabinetColor) => s.set({ cabinetColor })} />
+      <Segmented
+        label="Cabinet finish"
+        value={s.cabinetMaterial}
+        options={[
+          ['paint', 'Paint'],
+          ['wood', 'Wood'],
+        ]}
+        onChange={(cabinetMaterial) => s.set({ cabinetMaterial })}
+      />
+      {s.cabinetMaterial === 'paint' ? (
+        <PaintPicker label="Cabinet paint" value={s.cabinetColor} onChange={(cabinetColor) => s.set({ cabinetColor })} />
+      ) : (
+        <WoodPicker species={s.woodSpecies} stain={s.woodStain} onChange={(patch) => s.set(patch)} />
+      )}
       <PaintPicker label="Wall paint" value={s.wallColor} onChange={(wallColor) => s.set({ wallColor })} />
       <Segmented
         label="Door style"
@@ -99,7 +161,6 @@ export function FinishesPanel() {
         ]}
         onChange={(hardwareFinish) => s.set({ hardwareFinish })}
       />
-      <p className="muted small">Paint colours are on-screen approximations of the named chips.</p>
     </aside>
   );
 }
