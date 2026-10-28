@@ -136,7 +136,7 @@ input.search { width: 100%; font-family: inherit; margin-bottom: 10px; padding: 
 .callout { background: #fbf3ee; border: 1px solid #efd9cd; border-radius: 8px; padding: 10px; display: grid; gap: 8px; }
 .callout p { margin: 0; font-size: 12px; }
 .tips ul { padding-left: 16px; margin: 0; }
-button.list { display: block; width: 100%; text-align: left; margin-bottom: 4px; border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 5px 8px; text-transform: capitalize; }
+button.list { display: block; width: 100%; text-align: left; margin-bottom: 4px; border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 5px 8px; }
 
 .catalog-item {
   display: grid;
@@ -151,3 +151,4 @@ button.list { display: block; width: 100%; text-align: left; margin-bottom: 4px;
 }
 .catalog-item:hover { border-color: var(--accent); }
 .catalog-item .name { font-weight: 500; }
+.panel > .segmented { margin-bottom: 16px; }

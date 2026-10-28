@@ -1,8 +1,16 @@
 import { useRef, useState } from 'react';
 import {
+  DOOR_HEIGHTS,
+  DOOR_WIDTHS,
+  DOUBLE_DOOR_WIDTHS,
+  WINDOW_FRAMES,
+  WINDOW_SIZES,
+  WINDOW_STYLES,
   addOpening,
   bounds,
   clampOpenings,
+  doorOptions,
+  dot,
   feet,
   formatLength,
   inches,
@@ -14,12 +22,32 @@ import {
   setWallLength,
   signedArea,
   sub,
+  wallDir,
+  wallInwardNormal,
   wallLength,
+  windowOptions,
   type Opening,
   type Vec2,
 } from '@hearth/core';
 import { LengthInput } from './LengthInput';
 import { level, room, useHearth } from './doc';
+
+const KIND_LABEL: Record<Opening['kind'], string> = { door: 'Door', window: 'Window', passthrough: 'Opening' };
+
+function Choice<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: readonly (readonly [T, string])[]; onChange: (v: T) => void }) {
+  return (
+    <section className="field">
+      <h3>{label}</h3>
+      <div className="segmented">
+        {options.map(([v, text]) => (
+          <button key={v} className={v === value ? 'on' : ''} onClick={() => onChange(v)}>
+            {text}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -252,7 +280,7 @@ export function RoomInspector() {
             <h3>Openings</h3>
             {w.openings.map((o) => (
               <button key={o.id} className="list" onClick={() => select({ kind: 'opening', wall: i, id: o.id })}>
-                {o.kind} · {formatLength(o.width, units)}
+                {KIND_LABEL[o.kind]} · {formatLength(o.width, units)}
               </button>
             ))}
           </section>
@@ -276,34 +304,151 @@ export function RoomInspector() {
         Object.assign(ww.openings.find((x) => x.id === o.id)!, patch);
         clampOpenings(ww);
       });
+    const door = doorOptions(o);
+    const win = windowOptions(o);
+    // Left/right as seen standing in the room facing this wall.
+    const n = wallInwardNormal(r, selection.wall);
+    const endIsRight = dot(wallDir(w), { x: n.y, y: -n.x }) > 0;
+    const hingeSide = (door.hinge === 'end') === endIsRight ? 'right' : 'left';
+    const doorWidths = door.style === 'double' ? DOUBLE_DOOR_WIDTHS : DOOR_WIDTHS;
     return (
       <aside className="panel">
-        <h2>{o.kind === 'passthrough' ? 'Opening' : o.kind[0]!.toUpperCase() + o.kind.slice(1)}</h2>
+        <h2>{KIND_LABEL[o.kind]}</h2>
         <div className="segmented">
           {(['door', 'window', 'passthrough'] as const).map((k) => (
             <button
               key={k}
               className={o.kind === k ? 'on' : ''}
-              onClick={() => update({ kind: k, sillHeight: k === 'window' ? inches(42) : 0, height: k === 'window' ? inches(42) : inches(80) })}
+              onClick={() =>
+                o.kind !== k &&
+                update({ kind: k, sillHeight: k === 'window' ? inches(42) : 0, height: k === 'window' ? inches(42) : inches(80), width: k === 'door' ? inches(32) : o.width })
+              }
             >
-              {k === 'passthrough' ? 'Opening' : k}
+              {KIND_LABEL[k]}
             </button>
           ))}
         </div>
-        <Row label="Width">
-          <LengthInput value={o.width} units={units} onChange={(width) => update({ width })} />
-        </Row>
-        <Row label="Height">
-          <LengthInput value={o.height} units={units} onChange={(height) => update({ height })} />
-        </Row>
-        {o.kind === 'window' && (
-          <Row label="Sill height">
-            <LengthInput value={o.sillHeight} units={units} onChange={(sillHeight) => update({ sillHeight })} min={0} />
-          </Row>
+
+        {o.kind === 'door' && (
+          <>
+            <Choice
+              label="Style"
+              value={door.style}
+              options={[
+                ['single', 'Single'],
+                ['double', 'Double'],
+                ['pocket', 'Pocket'],
+                ['barn', 'Barn'],
+              ]}
+              onChange={(style) => update({ door: { ...door, style }, ...(style === 'double' && o.width < inches(48) ? { width: inches(60) } : {}) })}
+            />
+            {door.style !== 'double' && (
+              <Choice
+                label={door.style === 'pocket' || door.style === 'barn' ? 'Slides to (from inside)' : 'Hinges (from inside)'}
+                value={hingeSide}
+                options={[
+                  ['left', 'Left'],
+                  ['right', 'Right'],
+                ]}
+                onChange={(side) => update({ door: { ...door, hinge: (side === 'right') === endIsRight ? 'end' : 'start' } })}
+              />
+            )}
+            {(door.style === 'single' || door.style === 'double') && (
+              <Choice
+                label="Swing"
+                value={door.swing}
+                options={[
+                  ['in', 'Into room'],
+                  ['out', 'Out of room'],
+                ]}
+                onChange={(swing) => update({ door: { ...door, swing } })}
+              />
+            )}
+            <Row label="Common sizes">
+              <select value="" onChange={(e) => e.target.value && update({ width: inches(Number(e.target.value)) })}>
+                <option value="">Width…</option>
+                {doorWidths.map((wi) => (
+                  <option key={wi} value={wi}>
+                    {wi}"
+                  </option>
+                ))}
+              </select>
+              <select value="" onChange={(e) => e.target.value && update({ height: inches(Number(e.target.value)) })}>
+                <option value="">Height…</option>
+                {DOOR_HEIGHTS.map((h) => (
+                  <option key={h} value={h}>
+                    {h}"
+                  </option>
+                ))}
+              </select>
+            </Row>
+          </>
         )}
-        <Row label="From wall start">
-          <LengthInput value={o.offset} units={units} onChange={(offset) => update({ offset })} min={0} />
-        </Row>
+
+        {o.kind === 'window' && (
+          <>
+            <Choice label="Style" value={win.style} options={WINDOW_STYLES.map((x) => [x.id, x.name] as const)} onChange={(style) => update({ window: { ...win, style } })} />
+            <Row label="Common sizes">
+              <select
+                value=""
+                onChange={(e) => {
+                  const [wi, h] = e.target.value.split('x').map(Number);
+                  if (wi && h) update({ width: inches(wi), height: inches(h) });
+                }}
+              >
+                <option value="">W × H…</option>
+                {WINDOW_SIZES.map(([wi, h]) => (
+                  <option key={`${wi}x${h}`} value={`${wi}x${h}`}>
+                    {wi}" × {h}"
+                  </option>
+                ))}
+              </select>
+            </Row>
+            <Choice
+              label="Grilles"
+              value={win.grille}
+              options={[
+                ['none', 'None'],
+                ['colonial', 'Colonial'],
+                ['prairie', 'Prairie'],
+              ]}
+              onChange={(grille) => update({ window: { ...win, grille } })}
+            />
+            <section className="field">
+              <h3>Frame colour</h3>
+              <div className="swatches">
+                {WINDOW_FRAMES.map((fr) => (
+                  <button
+                    key={fr.hex}
+                    title={fr.name}
+                    className={fr.hex === win.frame ? 'swatch on' : 'swatch'}
+                    style={{ background: fr.hex }}
+                    onClick={() => update({ window: { ...win, frame: fr.hex } })}
+                  />
+                ))}
+              </div>
+              <span className="muted">{WINDOW_FRAMES.find((fr) => fr.hex === win.frame)?.name ?? 'Custom'}</span>
+            </section>
+          </>
+        )}
+
+        <section className="field">
+          <h3>Size & position</h3>
+          <Row label="Width">
+            <LengthInput value={o.width} units={units} onChange={(width) => update({ width })} />
+          </Row>
+          <Row label="Height">
+            <LengthInput value={o.height} units={units} onChange={(height) => update({ height })} />
+          </Row>
+          {o.kind === 'window' && (
+            <Row label="Sill height">
+              <LengthInput value={o.sillHeight} units={units} onChange={(sillHeight) => update({ sillHeight })} min={0} />
+            </Row>
+          )}
+          <Row label="From wall start">
+            <LengthInput value={o.offset} units={units} onChange={(offset) => update({ offset })} min={0} />
+          </Row>
+        </section>
         <button className="danger" onClick={deleteSelection}>
           Delete
         </button>

@@ -31,6 +31,8 @@ interface Panel {
   h: number;
   kind: 'door' | 'drawer' | 'false-front';
   hinge?: 'left' | 'right';
+  /** Where a door's pull goes: near its top (base, lower pantry) or bottom (wall, upper pantry). */
+  pullAt?: 'top' | 'bottom';
 }
 
 /** Splits the cabinet front into door and drawer panels, in mm. */
@@ -43,20 +45,27 @@ function layoutFronts(spec: CabinetSpec): Panel[] {
   let y = bottom + (spec.system === 'framed' ? reveal : reveal / 2);
   const panels: Panel[] = [];
 
-  const doors = (yFrom: number, yTo: number) => {
+  const doors = (yFrom: number, yTo: number, pullAt: 'top' | 'bottom' = spec.kind === 'wall' ? 'bottom' : 'top') => {
     const h = yTo - yFrom;
     if (w > MAX_SINGLE_DOOR_WIDTH) {
       const dw = (w - reveal) / 2;
-      panels.push({ x: x0, y: yFrom, w: dw, h, kind: 'door', hinge: 'left' });
-      panels.push({ x: x0 + dw + reveal, y: yFrom, w: dw, h, kind: 'door', hinge: 'right' });
+      panels.push({ x: x0, y: yFrom, w: dw, h, kind: 'door', hinge: 'left', pullAt });
+      panels.push({ x: x0 + dw + reveal, y: yFrom, w: dw, h, kind: 'door', hinge: 'right', pullAt });
     } else {
-      panels.push({ x: x0, y: yFrom, w, h, kind: 'door', hinge: 'left' });
+      panels.push({ x: x0, y: yFrom, w, h, kind: 'door', hinge: 'left', pullAt });
     }
   };
 
   switch (spec.front.type) {
     case 'doors':
-      doors(y, top);
+      if (spec.kind === 'tall' && spec.height > inches(72)) {
+        // Pantries: lower door up to wall-cabinet height, upper door above; pulls meet in the middle.
+        const split = Math.min(STANDARD.wallCabinetBottom, spec.height - inches(18));
+        doors(y, split - reveal / 2, 'top');
+        doors(split + reveal / 2, top, 'bottom');
+      } else {
+        doors(y, top);
+      }
       break;
     case 'door-drawer':
     case 'sink': {
@@ -194,7 +203,7 @@ function Pull({ panel, kind, finish, metal }: { panel: Panel; kind: 'base' | 'wa
     vertical = true;
     x = panel.hinge === 'left' ? m(panel.x + panel.w) - inset : m(panel.x) + inset;
     // Base doors: pull near the top. Wall doors: near the bottom.
-    y = kind === 'wall' ? m(panel.y) + inset + 0.06 : m(panel.y + panel.h) - inset - 0.06;
+    y = panel.pullAt === 'bottom' ? m(panel.y) + inset + 0.06 : m(panel.y + panel.h) - inset - 0.06;
   }
   if (panel.kind === 'false-front') return null;
 

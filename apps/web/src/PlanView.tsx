@@ -3,6 +3,8 @@ import {
   add,
   bounds,
   catalogItem,
+  cross,
+  doorOptions,
   dot,
   footprint,
   formatLength,
@@ -10,6 +12,7 @@ import {
   itemSize,
   moveVertex,
   moveWall,
+  norm,
   roomVertices,
   scale,
   snapItem,
@@ -18,6 +21,7 @@ import {
   wallDir,
   wallInwardNormal,
   wallLength,
+  type Opening,
   type PlacedItem,
   type Project,
   type Vec2,
@@ -288,24 +292,7 @@ export function PlanView({ editable }: { editable: 'room' | 'design' }) {
                     }}
                   >
                     <polygon points={gap.map((v) => `${v.x},${v.y}`).join(' ')} fill="var(--plan-floor)" stroke={osel ? 'var(--accent)' : 'var(--ink)'} strokeWidth={(osel ? 2 : 1) * px} />
-                    {o.kind === 'window' ? (
-                      <line
-                        x1={add(a, scale(out, w.thickness / 2)).x}
-                        y1={add(a, scale(out, w.thickness / 2)).y}
-                        x2={add(b, scale(out, w.thickness / 2)).x}
-                        y2={add(b, scale(out, w.thickness / 2)).y}
-                        stroke="var(--ink)"
-                        strokeWidth={px}
-                      />
-                    ) : (
-                      <path
-                        d={`M ${a.x} ${a.y} L ${add(a, scale(n, o.width)).x} ${add(a, scale(n, o.width)).y} A ${o.width} ${o.width} 0 0 ${dot(d, { x: -n.y, y: n.x }) > 0 ? 0 : 1} ${b.x} ${b.y}`}
-                        fill="none"
-                        stroke="var(--ink)"
-                        strokeWidth={px}
-                        strokeDasharray={`${4 * px} ${3 * px}`}
-                      />
-                    )}
+                    <OpeningSymbol o={o} a={a} b={b} n={n} out={out} thickness={w.thickness} px={px} />
                   </g>
                 );
               })}
@@ -384,6 +371,60 @@ export function PlanView({ editable }: { editable: 'room' | 'design' }) {
       </foreignObject>
     </svg>
   );
+}
+
+/** Plan symbol for a door, window or opening between jamb points a and b (wall's room face). */
+function OpeningSymbol({ o, a, b, n, out, thickness, px }: { o: Opening; a: Vec2; b: Vec2; n: Vec2; out: Vec2; thickness: number; px: number }) {
+  const line = { stroke: 'var(--ink)', strokeWidth: px, fill: 'none' } as const;
+  if (o.kind === 'window') {
+    return (
+      <>
+        {[0.35, 0.65].map((k) => {
+          const p = add(a, scale(out, thickness * k)), q = add(b, scale(out, thickness * k));
+          return <line key={k} x1={p.x} y1={p.y} x2={q.x} y2={q.y} {...line} />;
+        })}
+      </>
+    );
+  }
+  if (o.kind === 'passthrough') return null;
+  const d = doorOptions(o);
+  const dir = norm(sub(b, a));
+  const hingeAtStart = d.hinge === 'start';
+  if (d.style === 'pocket') {
+    // Leaf hidden in the wall beside the hinge-side jamb.
+    const mid = scale(out, thickness / 2);
+    const p = add(hingeAtStart ? a : b, mid), q = add(p, scale(dir, hingeAtStart ? -o.width : o.width));
+    return <line x1={p.x} y1={p.y} x2={q.x} y2={q.y} {...line} strokeWidth={3 * px} strokeDasharray={`${4 * px} ${3 * px}`} />;
+  }
+  if (d.style === 'barn') {
+    const off = scale(n, 45);
+    const p = add(add(a, off), scale(dir, -50)), q = add(add(b, off), scale(dir, 50));
+    return <line x1={p.x} y1={p.y} x2={q.x} y2={q.y} {...line} strokeWidth={3 * px} />;
+  }
+  // Swinging leaves pivot on the face of the wall they open towards.
+  const s = d.swing === 'in' ? n : out;
+  const face = d.swing === 'in' ? { x: 0, y: 0 } : scale(out, thickness);
+  const leaf = (hinge: Vec2, other: Vec2, width: number, key: string) => {
+    const h = add(hinge, face), o2 = add(other, face);
+    const tip = add(h, scale(s, width));
+    const sweep = cross(s, sub(o2, h)) > 0 ? 1 : 0;
+    return (
+      <g key={key}>
+        <line x1={h.x} y1={h.y} x2={tip.x} y2={tip.y} {...line} strokeWidth={2 * px} />
+        <path d={`M ${tip.x} ${tip.y} A ${width} ${width} 0 0 ${sweep} ${o2.x} ${o2.y}`} {...line} strokeDasharray={`${4 * px} ${3 * px}`} />
+      </g>
+    );
+  };
+  if (d.style === 'double') {
+    const mid = scale(add(a, b), 0.5);
+    return (
+      <>
+        {leaf(a, mid, o.width / 2, 'l')}
+        {leaf(b, mid, o.width / 2, 'r')}
+      </>
+    );
+  }
+  return leaf(hingeAtStart ? a : b, hingeAtStart ? b : a, o.width, 's');
 }
 
 /** Set by the mounted PlanView so drops from the catalog can be converted to plan coordinates. */

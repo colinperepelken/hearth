@@ -53,6 +53,11 @@ function CameraRig() {
   const camera = useThree((s) => s.camera);
   const mode = useHearth((s) => s.mode);
   const prev = useRef(mode);
+  const controls = useThree((s) => s.controls);
+  useEffect(() => {
+    // Dev-only handle for inspecting views from the console.
+    if (import.meta.env.DEV) Object.assign(window, { __hearthCamera: { camera, controls } });
+  }, [camera, controls]);
   useEffect(() => {
     const { cx, cz, span, maxZ } = roomCentre(useHearth.getState().project);
     if (mode === 'walk' && prev.current !== 'walk') {

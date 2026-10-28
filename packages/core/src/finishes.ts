@@ -102,3 +102,29 @@ export const TILE_COLOURS = [
   { name: 'Charcoal', hex: '#3C3C3C' },
   { name: 'Terracotta', hex: '#B5674A' },
 ] as const;
+
+export const WINDOW_STYLES = [
+  { id: 'double-hung', name: 'Double-hung' },
+  { id: 'single-hung', name: 'Single-hung' },
+  { id: 'casement', name: 'Casement' },
+  { id: 'slider', name: 'Slider' },
+  { id: 'awning', name: 'Picture + awning' },
+  { id: 'picture', name: 'Picture' },
+] as const;
+
+export const WINDOW_FRAMES = [
+  { name: 'White', hex: '#F4F3EE' },
+  { name: 'Black', hex: '#1E1E1E' },
+  { name: 'Bronze', hex: '#4A3B2E' },
+  { name: 'Sandstone', hex: '#CDBFA6' },
+  { name: 'Natural wood', hex: '#B98A5A' },
+] as const;
+
+/** Common rough-opening sizes, inches (width x height). */
+export const WINDOW_SIZES = [
+  [24, 36], [24, 48], [30, 36], [30, 48], [36, 36], [36, 48], [36, 60], [48, 36], [48, 48], [60, 48], [72, 48],
+] as const;
+
+export const DOOR_WIDTHS = [24, 28, 30, 32, 34, 36] as const;
+export const DOUBLE_DOOR_WIDTHS = [48, 60, 64, 72] as const;
+export const DOOR_HEIGHTS = [80, 84, 96] as const;

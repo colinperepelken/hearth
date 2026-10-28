@@ -94,7 +94,28 @@ export interface Opening {
   width: Mm;
   height: Mm;
   sillHeight: Mm;
+  /** Door details; defaults from `doorOptions()` when absent. */
+  door?: DoorOptions;
+  /** Window details; defaults from `windowOptions()` when absent. */
+  window?: WindowOptions;
 }
+
+export interface DoorOptions {
+  style: 'single' | 'double' | 'pocket' | 'barn';
+  /** Which jamb the hinges are on, along the wall: the wall's start or end. */
+  hinge: 'start' | 'end';
+  swing: 'in' | 'out';
+}
+
+export interface WindowOptions {
+  style: 'double-hung' | 'single-hung' | 'casement' | 'slider' | 'picture' | 'awning';
+  grille: 'none' | 'colonial' | 'prairie';
+  /** Frame colour (hex). */
+  frame: string;
+}
+
+export const doorOptions = (o: Opening): DoorOptions => ({ style: 'single', hinge: 'start', swing: 'in', ...o.door });
+export const windowOptions = (o: Opening): WindowOptions => ({ style: 'double-hung', grille: 'none', frame: '#F4F3EE', ...o.window });
 
 /** A reference into the finish catalog, or a custom colour. */
 export type FinishRef = { catalogId: string } | { paintHex: string; paintName?: string };
