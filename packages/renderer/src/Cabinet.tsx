@@ -69,8 +69,10 @@ function layoutFronts(spec: CabinetSpec): Panel[] {
       break;
     case 'door-drawer':
     case 'sink': {
-      const dh = spec.front.type === 'sink' ? inches(6) : spec.front.drawerHeight;
-      panels.push({ x: x0, y: top - dh, w, h: dh, kind: spec.front.type === 'sink' ? 'false-front' : 'drawer' });
+      const apron = spec.front.type === 'sink' ? spec.front.apron : undefined;
+      const dh = spec.front.type === 'sink' ? (apron ?? inches(6)) : spec.front.drawerHeight;
+      // A farmhouse sink's apron (drawn with the countertop) takes the false front's place.
+      if (!apron) panels.push({ x: x0, y: top - dh, w, h: dh, kind: spec.front.type === 'sink' ? 'false-front' : 'drawer' });
       doors(y, top - dh - reveal);
       break;
     }

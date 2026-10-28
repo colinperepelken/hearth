@@ -9,7 +9,7 @@ export type FrontLayout =
   | { type: 'door-drawer'; drawerHeight: Mm } // one drawer over door(s)
   | { type: 'drawers'; count: number }
   | { type: 'doors' }
-  | { type: 'sink' }; // false drawer front over doors
+  | { type: 'sink'; apron?: Mm }; // false drawer front (or a farmhouse sink's apron) over doors
 
 export interface CabinetSpec {
   kind: CabinetKind;

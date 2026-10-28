@@ -9,3 +9,4 @@ export * from './surfaces';
 export * from './textures';
 export * from './WalkControls';
 export * from './wood';
+export * from './Sink';

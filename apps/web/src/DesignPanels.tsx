@@ -3,12 +3,16 @@ import {
   CATALOG,
   catalogItem,
   formatLength,
+  inches,
   itemSize,
+  overhangOf,
+  sinkOptions,
   newId,
   snapItem,
   type CatalogItem,
   type ItemCategory,
   type PlacedItem,
+  type SinkOptions,
 } from '@hearth/core';
 import { LengthInput } from './LengthInput';
 import { room, useHearth } from './doc';
@@ -83,6 +87,49 @@ export function CatalogPanel() {
   );
 }
 
+function SinkSection({ item, update }: { item: PlacedItem; update: (fn: (i: PlacedItem) => void) => void }) {
+  const o = sinkOptions(item);
+  const set = (patch: Partial<SinkOptions>) => update((i) => void (i.options.sink = { ...o, ...patch }));
+  const choice = <K extends keyof SinkOptions>(label: string, key: K, options: [SinkOptions[K], string][]) => (
+    <section className="field">
+      <h3>{label}</h3>
+      <div className="segmented">
+        {options.map(([v, text]) => (
+          <button key={v} className={o[key] === v ? 'on' : ''} onClick={() => set({ [key]: v } as Partial<SinkOptions>)}>
+            {text}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+  return (
+    <>
+      {choice('Sink', 'style', [
+        ['single', 'Single bowl'],
+        ['double', 'Double bowl'],
+        ['farmhouse', 'Farmhouse'],
+      ])}
+      {choice('Sink finish', 'finish', [
+        ['stainless', 'Stainless'],
+        ['black', 'Black'],
+        ['white', 'White'],
+      ])}
+      {choice('Faucet', 'faucet', [
+        ['gooseneck', 'Gooseneck'],
+        ['pull-down', 'Pull-down'],
+        ['bridge', 'Bridge'],
+        ['commercial', 'Commercial'],
+      ])}
+      {choice('Faucet finish', 'faucetFinish', [
+        ['chrome', 'Chrome'],
+        ['nickel', 'Brushed nickel'],
+        ['black', 'Matte black'],
+        ['brass', 'Brass'],
+      ])}
+    </>
+  );
+}
+
 export function ItemInspector() {
   const project = useHearth((s) => s.project);
   const selection = useHearth((s) => s.selection);
@@ -121,6 +168,16 @@ export function ItemInspector() {
       it.position.y += Math.sin(it.rotation) * dw;
     });
 
+  /** Changes depth keeping the back in place (against its wall). */
+  const setDepth = (dep: number) =>
+    edit((p) => {
+      const it = room(p).items.find((i) => i.id === item.id)!;
+      const dd = (dep - itemSize(it).depth) / 2;
+      it.options.depth = dep;
+      it.position.x += -Math.sin(it.rotation) * dd;
+      it.position.y += Math.cos(it.rotation) * dd;
+    });
+
   const duplicate = () => {
     const id = newId('item');
     edit((p) => {
@@ -139,7 +196,12 @@ export function ItemInspector() {
 
   return (
     <aside className="panel">
-      <h2>{c.name}</h2>
+      <div className="inspector-head">
+        <h2>{c.name}</h2>
+        <button className="chip" onClick={() => select(null)} title="Deselect (Esc)">
+          Done
+        </button>
+      </div>
       {c.brand && (
         <p className="muted">
           {c.brand} {c.model}
@@ -183,9 +245,38 @@ export function ItemInspector() {
         )}
         <label className="row">
           <span>Depth</span>
-          <span>{formatLength(size.depth, units)}</span>
+          {c.render.type === 'cabinet' ? (
+            <LengthInput value={size.depth} units={units} min={inches(6)} onChange={setDepth} />
+          ) : (
+            <span>{formatLength(size.depth, units)}</span>
+          )}
         </label>
       </section>
+      {c.render.type === 'cabinet' && c.render.sink && <SinkSection item={item} update={update} />}
+      {c.counter && (
+        <section className="field">
+          <h3>Countertop overhang</h3>
+          {(
+            [
+              ['front', 'Front'],
+              ['back', 'Back (seating)'],
+              ['left', 'Left end'],
+              ['right', 'Right end'],
+            ] as const
+          ).map(([k, label]) => (
+            <label key={k} className="row">
+              <span>{label}</span>
+              <LengthInput
+                value={overhangOf(item)[k]}
+                units={units}
+                min={0}
+                onChange={(v) => update((i) => void (i.options.overhang = { ...i.options.overhang, [k]: v }))}
+              />
+            </label>
+          ))}
+          <p className="muted small">Front and back use the largest value in the run; ends come from the first and last cabinet. A 10–12" back overhang suits counter stools.</p>
+        </section>
+      )}
       <section className="field">
         <h3>Position</h3>
         <label className="row">

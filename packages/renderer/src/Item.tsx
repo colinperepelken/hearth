@@ -6,6 +6,7 @@ import {
   catalogItem,
   inches,
   itemSize,
+  sinkOptions,
   toMetres as m,
   type CabinetSpec,
   type Finishes,
@@ -124,7 +125,8 @@ export function Item({ item, finishes, ceilingHeight, selected, onPointerDown }:
       width: size.width,
       height: size.height,
       depth: size.depth,
-      front: r.front,
+      // Farmhouse sinks replace the false front with their own apron.
+      front: r.sink && sinkOptions(item).style === 'farmhouse' ? { type: 'sink', apron: inches(10) } : r.front,
       doorStyle: finishes.doorStyle,
     };
     body = <Cabinet spec={spec} finish={cabinetFinish} />;
@@ -164,7 +166,8 @@ export function Item({ item, finishes, ceilingHeight, selected, onPointerDown }:
       userData={{ itemId: item.id }}
     >
       <group position={[-w / 2, 0, -d / 2]}>{body}</group>
-      {selected && <lineSegments geometry={outline} material={selectionMat} position={[0, h / 2, 0]} renderOrder={10} />}
+      {/* The outline ignores the pointer: lines are hit-tested with a wide tolerance. */}
+      {selected && <lineSegments geometry={outline} material={selectionMat} position={[0, h / 2, 0]} renderOrder={10} raycast={() => null} />}
     </group>
   );
 }

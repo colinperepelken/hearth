@@ -152,3 +152,5 @@ button.list { display: block; width: 100%; text-align: left; margin-bottom: 4px;
 .catalog-item:hover { border-color: var(--accent); }
 .catalog-item .name { font-weight: 500; }
 .panel > .segmented { margin-bottom: 16px; }
+.inspector-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.inspector-head h2 { margin-bottom: 10px; }

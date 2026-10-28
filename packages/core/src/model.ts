@@ -131,6 +131,39 @@ export interface PlacedItem {
    * the 3D scene uses rotation.y = -rotation.
    */
   rotation: number;
-  /** Per-item options: `width`, `height` (mm) overrides and future finish overrides. */
-  options: { width?: Mm; height?: Mm; [k: string]: unknown };
+  /** Per-item options: size overrides (mm), sink setup, countertop overhangs. */
+  options: {
+    width?: Mm;
+    height?: Mm;
+    depth?: Mm;
+    sink?: Partial<SinkOptions>;
+    /** Countertop overhang beyond this cabinet (mm). Runs take the largest front/back and their end items' sides. */
+    overhang?: Partial<Overhang>;
+    [k: string]: unknown;
+  };
 }
+
+export interface Overhang {
+  front: Mm;
+  back: Mm;
+  left: Mm;
+  right: Mm;
+}
+
+export interface SinkOptions {
+  style: 'single' | 'double' | 'farmhouse';
+  finish: 'stainless' | 'black' | 'white';
+  faucet: 'gooseneck' | 'pull-down' | 'bridge' | 'commercial';
+  faucetFinish: 'chrome' | 'nickel' | 'black' | 'brass';
+}
+
+export const sinkOptions = (item: PlacedItem): SinkOptions => ({
+  style: 'single',
+  finish: 'stainless',
+  faucet: 'gooseneck',
+  faucetFinish: 'chrome',
+  ...item.options.sink,
+});
+
+/** Default overhang: 1" past the cabinet fronts, flush elsewhere. */
+export const overhangOf = (item: PlacedItem): Overhang => ({ front: 25.4, back: 0, left: 0, right: 0, ...item.options.overhang });

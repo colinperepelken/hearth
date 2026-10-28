@@ -20,6 +20,16 @@ import { level, room, useHearth } from './doc';
 
 const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
+function itemOf(o: THREE.Object3D | null): string | null {
+  for (; o; o = o.parent) if (o.userData.itemId) return o.userData.itemId as string;
+  return null;
+}
+
+function shown(o: THREE.Object3D | null): boolean {
+  for (; o; o = o.parent) if (!o.visible) return false;
+  return true;
+}
+
 /** Converts a ray to a plan point on the floor, in mm. */
 function rayToPlan(ray: THREE.Ray): Vec2 | null {
   const hit = ray.intersectPlane(floorPlane, new THREE.Vector3());
@@ -146,9 +156,21 @@ function SceneContents() {
     <>
       <Environment preset="apartment" environmentIntensity={0.35} />
       <RoomLights room={r} height={lvl.ceilingHeight} items={r.items} />
-      <RoomModel room={r} height={lvl.ceilingHeight} wallPaint={f.wallPaint} floor={f.floor} cutaway={mode === 'orbit'} />
       <Items />
-      <CounterRuns room={r} items={r.items} countertop={f.countertop} backsplash={f.backsplash} />
+      {/* Clicking anything that isn't an item (floor, walls, counters) deselects; drags (orbiting) don't. */}
+      <group
+        onClick={(e) => {
+          e.stopPropagation();
+          if (e.delta > 5 || useHearth.getState().step !== 'design') return;
+          // Deselect unless the nearest visible thing under the pointer is an item. (Cutaway walls
+          // are hidden but still hit by the ray, so skip anything not shown.)
+          const first = e.intersections.find((h) => shown(h.object));
+          if (first && !itemOf(first.object)) useHearth.getState().select(null);
+        }}
+      >
+        <RoomModel room={r} height={lvl.ceilingHeight} wallPaint={f.wallPaint} floor={f.floor} cutaway={mode === 'orbit'} />
+        <CounterRuns room={r} items={r.items} countertop={f.countertop} backsplash={f.backsplash} />
+      </group>
     </>
   );
 }

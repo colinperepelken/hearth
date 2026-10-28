@@ -223,7 +223,7 @@ export function itemSize(item: PlacedItem): { width: Mm; depth: Mm; height: Mm }
   const c = catalogItem(item.catalogId);
   return {
     width: (item.options.width as Mm | undefined) ?? c.width,
-    depth: c.depth,
+    depth: (item.options.depth as Mm | undefined) ?? c.depth,
     height: (item.options.height as Mm | undefined) ?? c.height,
   };
 }

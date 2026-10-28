@@ -166,3 +166,5 @@ export const PAINTS = [
   { name: 'Hale Navy', code: 'BM HC-154', hex: '#434B56' },
   { name: 'Wrought Iron', code: 'BM 2124-10', hex: '#4B4D4F' },
 ] as const;
+
+if (import.meta.env.DEV) Object.assign(window, { __hearth: useHearth });
