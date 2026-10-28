@@ -20,6 +20,9 @@ import { level, room, useHearth } from './doc';
 
 const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
+/** When an item last received a press; the click that follows it shouldn't deselect. */
+let itemPressedAt = 0;
+
 function itemOf(o: THREE.Object3D | null): string | null {
   for (; o; o = o.parent) if (o.userData.itemId) return o.userData.itemId as string;
   return null;
@@ -92,6 +95,7 @@ function Items() {
   const down = (id: string) => (e: ThreeEvent<PointerEvent>) => {
     if (!interactive || e.button !== 0) return;
     e.stopPropagation();
+    itemPressedAt = performance.now();
     const s = useHearth.getState();
     s.select({ kind: 'item', id });
     const p = rayToPlan(e.ray);
@@ -162,8 +166,9 @@ function SceneContents() {
         onClick={(e) => {
           e.stopPropagation();
           if (e.delta > 5 || useHearth.getState().step !== 'design') return;
-          // Deselect unless the nearest visible thing under the pointer is an item. (Cutaway walls
-          // are hidden but still hit by the ray, so skip anything not shown.)
+          // A press that just selected an item (e.g. through its countertop or sink) keeps it selected.
+          if (performance.now() - itemPressedAt < 1000) return;
+          // Cutaway walls are hidden but still hit by the ray, so skip anything not shown.
           const first = e.intersections.find((h) => shown(h.object));
           if (first && !itemOf(first.object)) useHearth.getState().select(null);
         }}
