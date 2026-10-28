@@ -1,0 +1,24 @@
+{
+  "name": "@hearth/renderer",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@hearth/core": "workspace:*",
+    "@react-three/drei": "10.7.9",
+    "@react-three/fiber": "9.8.2",
+    "react": "19.3.1",
+    "three": "0.186.1",
+    "three-gpu-pathtracer": "0.0.27",
+    "three-mesh-bvh": "^0.9.15"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/three": "0.186.0",
+    "typescript": "5.9.3"
+  }
+}
