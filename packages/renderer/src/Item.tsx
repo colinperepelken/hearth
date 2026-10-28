@@ -20,6 +20,9 @@ import { applianceMaterials } from './surfaces';
 const furnitureWood = () => surfaceMaterial({ type: 'wood', species: 'walnut', stain: 'natural' });
 const blackMetal = new THREE.MeshPhysicalMaterial({ color: '#1d1d1d', metalness: 0.7, roughness: 0.45 });
 const selectionMat = new THREE.LineBasicMaterial({ color: '#e0692f', depthTest: false, transparent: true });
+const hoverLineMat = new THREE.LineBasicMaterial({ color: '#e0692f', depthTest: false, transparent: true, opacity: 0.85 });
+const hoverFillMat = new THREE.MeshBasicMaterial({ color: '#e0692f', transparent: true, opacity: 0.25, depthWrite: false });
+const noRaycast = () => null;
 
 function Furniture({ type, w, d, h }: { type: FurnitureType; w: number; d: number; h: number }) {
   const wood = furnitureWood();
@@ -100,11 +103,13 @@ export interface ItemProps {
   finishes: Finishes;
   ceilingHeight: number;
   selected?: boolean;
+  /** Pointer is over the item: tint it so it's clear what a click will select. */
+  hovered?: boolean;
   onPointerDown?: (e: ThreeEvent<PointerEvent>) => void;
 }
 
 /** One placed catalog item, positioned from its plan centre and rotation. */
-export function Item({ item, finishes, ceilingHeight, selected, onPointerDown }: ItemProps) {
+export function Item({ item, finishes, ceilingHeight, selected, hovered, onPointerDown }: ItemProps) {
   const c = catalogItem(item.catalogId);
   const size = itemSize(item);
   const w = m(size.width), d = m(size.depth), h = m(size.height);
@@ -167,7 +172,15 @@ export function Item({ item, finishes, ceilingHeight, selected, onPointerDown }:
     >
       <group position={[-w / 2, 0, -d / 2]}>{body}</group>
       {/* The outline ignores the pointer: lines are hit-tested with a wide tolerance. */}
-      {selected && <lineSegments geometry={outline} material={selectionMat} position={[0, h / 2, 0]} renderOrder={10} raycast={() => null} />}
+      {selected && <lineSegments geometry={outline} material={selectionMat} position={[0, h / 2, 0]} renderOrder={10} raycast={noRaycast} />}
+      {hovered && !selected && (
+        <>
+          <lineSegments geometry={outline} material={hoverLineMat} position={[0, h / 2, 0]} renderOrder={10} raycast={noRaycast} />
+          <mesh position={[0, h / 2, 0]} material={hoverFillMat} renderOrder={9} raycast={noRaycast}>
+            <boxGeometry args={[w + 0.012, h + 0.012, d + 0.012]} />
+          </mesh>
+        </>
+      )}
     </group>
   );
 }

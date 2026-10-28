@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useRef } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useThree, type ThreeEvent } from '@react-three/fiber';
 import { Environment, Loader, OrbitControls } from '@react-three/drei';
 import { Bloom, EffectComposer, N8AO, SMAA, ToneMapping } from '@react-three/postprocessing';
@@ -91,6 +91,12 @@ function Items() {
   const drag = useRef<{ id: string; grab: Vec2; orig: Project; moved: boolean } | null>(null);
   const r = room(project);
   const interactive = step === 'design' && mode === 'orbit';
+  const dragging = useHearth((s) => s.dragging);
+  const [hovered, setHovered] = useState<string | null>(null);
+  const gl = useThree((s) => s.gl);
+  useEffect(() => {
+    gl.domElement.style.cursor = dragging ? 'grabbing' : interactive && hovered ? 'pointer' : '';
+  }, [gl, dragging, interactive, hovered]);
 
   const down = (id: string) => (e: ThreeEvent<PointerEvent>) => {
     if (!interactive || e.button !== 0) return;
@@ -107,7 +113,14 @@ function Items() {
   };
   const move = (e: ThreeEvent<PointerEvent>) => {
     const d = drag.current;
-    if (!d) return;
+    if (!d) {
+      // Hover: the item a press here would select (the first item hit, as on pointerdown).
+      if (!interactive) return;
+      const hit = e.intersections.find((h) => shown(h.object) && itemOf(h.object));
+      const id = hit ? itemOf(hit.object) : null;
+      if (id !== hovered) setHovered(id);
+      return;
+    }
     const p = rayToPlan(e.ray);
     if (!p) return;
     if (!d.moved) {
@@ -135,7 +148,7 @@ function Items() {
   };
 
   return (
-    <group onPointerMove={move} onPointerUp={up}>
+    <group onPointerMove={move} onPointerUp={up} onPointerLeave={() => !drag.current && setHovered(null)}>
       {r.items.map((it) => (
         <Item
           key={it.id}
@@ -143,6 +156,7 @@ function Items() {
           finishes={project.finishes}
           ceilingHeight={level(project).ceilingHeight}
           selected={interactive && selection?.kind === 'item' && selection.id === it.id}
+          hovered={interactive && hovered === it.id}
           onPointerDown={down(it.id)}
         />
       ))}
