@@ -172,10 +172,10 @@ export function Item({ item, finishes, ceilingHeight, selected, hovered, onPoint
     >
       <group position={[-w / 2, 0, -d / 2]}>{body}</group>
       {/* The outline ignores the pointer: lines are hit-tested with a wide tolerance. */}
-      {selected && <lineSegments geometry={outline} material={selectionMat} position={[0, h / 2, 0]} renderOrder={10} raycast={noRaycast} />}
-      {hovered && !selected && (
+      {/* Selected items keep the hover tint, with a solid outline on top. */}
+      {(selected || hovered) && (
         <>
-          <lineSegments geometry={outline} material={hoverLineMat} position={[0, h / 2, 0]} renderOrder={10} raycast={noRaycast} />
+          <lineSegments geometry={outline} material={selected ? selectionMat : hoverLineMat} position={[0, h / 2, 0]} renderOrder={10} raycast={noRaycast} />
           <mesh position={[0, h / 2, 0]} material={hoverFillMat} renderOrder={9} raycast={noRaycast}>
             <boxGeometry args={[w + 0.012, h + 0.012, d + 0.012]} />
           </mesh>

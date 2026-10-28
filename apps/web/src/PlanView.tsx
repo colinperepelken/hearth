@@ -284,7 +284,7 @@ export function PlanView({ editable }: { editable: 'room' | 'design' }) {
                 return (
                   <g
                     key={o.id}
-                    className={editable === 'room' ? 'hit opening' : ''}
+                    className={editable === 'room' ? `hit opening${osel ? ' selected' : ''}` : ''}
                     onPointerDown={(e) => {
                       if (editable !== 'room' || calibration) return;
                       select({ kind: 'opening', wall: i, id: o.id });
@@ -313,7 +313,7 @@ export function PlanView({ editable }: { editable: 'room' | 'design' }) {
             return (
               <g
                 key={it.id}
-                className={editable === 'design' ? 'hit item' : 'faded'}
+                className={editable === 'design' ? `hit item${sel ? ' selected' : ''}` : 'faded'}
                 onPointerDown={(e) => {
                   if (editable !== 'design') return;
                   select({ kind: 'item', id: it.id });

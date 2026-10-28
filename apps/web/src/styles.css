@@ -75,9 +75,9 @@ button.danger { color: #a3321b; }
 .plan .hit.wall, .plan .hit.opening, .plan .hit.item { cursor: pointer; }
 .plan .hit.wall:active, .plan .hit.opening:active, .plan .hit.item:active { cursor: grabbing; }
 /* Hover: show what a click will select (presentation attributes lose to these rules). */
-.plan .hit.item:hover polygon { stroke: var(--accent); fill: #f6dccd; }
+.plan .hit.item:hover polygon, .plan .hit.item.selected polygon { stroke: var(--accent); fill: #f6dccd; }
 .plan polygon.hit.wall:hover { fill: var(--accent); fill-opacity: 0.35; }
-.plan .hit.opening:hover polygon { stroke: var(--accent); fill: #f6dccd; }
+.plan .hit.opening:hover polygon, .plan .hit.opening.selected polygon { stroke: var(--accent); fill: #f6dccd; }
 .plan .faded { opacity: 0.45; pointer-events: none; }
 .plan .vertex { fill: #fff; stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; cursor: move; }
 .plan text { font-family: Inter, system-ui, sans-serif; fill: var(--ink); }
